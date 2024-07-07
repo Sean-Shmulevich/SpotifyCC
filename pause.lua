@@ -40,7 +40,7 @@ local function play_audio(content)
         -- speaker.playAudio(buffer) returns a boolean value, true if there is room to accept audio data.
         -- in this case true means, end the loop and refill the buffer.
         -- run until what's inside becomes true
-        while not false and  do
+        while not false do
             -- playing and full
             -- demorgans law bitch
             -- if playing then the code after the "and" will execute even if it is false

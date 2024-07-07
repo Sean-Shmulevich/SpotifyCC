@@ -27,36 +27,69 @@ end
 local function play_audio(content)
     local decoder = dfpwm.make_decoder()
     local chunk_size = 16 * 1024
-    local start = 1
+    local chunk_idx = 1
+    local playback_state = "playing"
 
-    while start <= #content do
+    -- these nested loops are a bit confusing but essentially, audio is buffered, by the outter loop in increments of chunk size
+    -- and then the inner loop goes until all of the data in that buffer is played.
+    while chunk_idx <= #content do
         -- splitting the .dfpwn file into chunks 
-        local chunk = content:sub(start, start + chunk_size - 1)
+        local chunk = content:sub(chunk_idx, chunk_idx + chunk_size - 1)
         local buffer = decoder(chunk)
 
-        -- the declaration in this loop also executes each iteration of the loop
-        -- buffer fills by 'chunk_size' chunks per each loop iteration
-        -- declaration plays audio.
-        while not speaker.playAudio(buffer) do
-            -- os.pullEvent() is a blocking function that waits for an event to occur, and then returns the event and its arguments.
+        -- everything inside of this loop happens while the song is playing-
+        -- for each filling and clearing of the chunked buffer
+        -- speaker.playAudio(buffer) returns a boolean value, true if there is room to accept audio data.
+        while true do
+            -- playing and full
+            -- speaker.playAudio will only execute when playback_state is "playing", cause de-morgans law bitch
+            if (playback_state=="playing" and speaker.playAudio(buffer)) then
+                break -- end loop and load in next buffered chunk.
+            end
+
             -- so its essentially pausing and checking for any events that are within its scope.
             -- since play_audio function is nested in the websocket event loop it will be able to see when a websocket message is received when it pauses.
-            -- the other "speaker_audio_empty" event IDK what it does tbh
-            local event, arg1, arg2 = os.pullEvent()
-            -- adding a check for the websocket message in the play audio loop, makes it so that with each iteration of the loop, 
-            -- it will check if a websocket message has been recevied
-            -- for now every message means 
+            local event, arg1, arg2 = os.pullEvent() -- os.pullEvent() is a blocking function that waits for an event to occur, and then returns the event and its arguments
+
             if event == "websocket_message" and arg1 == myURL then -- arg1 represents the url of the websocket that sent the message
                 print("Received new song while playing")
                 -- this contains the message sent from the websocket which in this case is the url of the new song created on the python server.
                 return arg2 -- Stop current playback to handle the new message
+            elseif event == "mouse_click" then
+
+                playback_state = "paused"
+
+
+                -- During this loop I need to check for any event basically that will pause
+                -- I could try a custom event or rednet from a monitor display pgrm.
+                -- or i could run a ui player in the console.
+                -- save and store chunk idx
+
+                -- if you mouse click, then this loop continues on and does nothing but checks for the next mouseclick.
+                -- most importantly speaker.playAudio(buffer) will not be called until the next mouse click.
+                -- i kinda do not wanna have the pause execution leave this function because then i will have to redownload from the server.
+                -- if i could get the rest of the song saved to a drive in this section, and i did return when recieving mouse)click event
+                -- then maybe i could call play_audio to a local file path. thats kinda a good solution because its not redownloading from the server? why is that a good idea?
+                -- either way on the unpause, i need to start from the chunk_idx that was saved.
+
+
+                print("Mouse click event paused")
+            elseif event == "key" then
+                -- run unpause logic
+                print("Key event play")
+                playback_state = "playing"
+                -- the chunk stops incrementing when paused. so it will likely start over that chunk.
+                speaker.playAudio(buffer)
             elseif event == "speaker_audio_empty" then
                 -- Continue playing
             end
         end
 
         -- increment current position of song by chunk size
-        start = start + chunk_size
+        -- dont increment when paused.
+        if (playback_state=="playing") then
+            chunk_idx = chunk_idx + chunk_size
+        end
     end
 
     return nil
