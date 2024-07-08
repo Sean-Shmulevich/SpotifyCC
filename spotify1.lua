@@ -24,6 +24,19 @@ local function download_audio(url)
     end
 end
 
+function dump(o)
+    if type(o) == 'table' then
+        local s = '{ '
+        for k,v in pairs(o) do
+            if type(k) ~= 'number' then k = '"'..k..'"' end
+            s = s .. '['..k..'] = ' .. dump(v) .. ','
+        end
+        return s .. '} '
+    else
+        return tostring(o)
+    end
+end
+
 local function play_audio(content)
     local decoder = dfpwm.make_decoder()
     local chunk_size = 16 * 1024
@@ -36,13 +49,13 @@ local function play_audio(content)
         -- splitting the .dfpwn file into chunks 
         local chunk = content:sub(chunk_idx, chunk_idx + chunk_size - 1)
         local buffer = decoder(chunk)
+        local buffer_idx = 0
 
         -- everything inside of this loop happens while the song is playing-
         -- for each filling and clearing of the chunked buffer
         -- speaker.playAudio(buffer) returns a boolean value, true if there is room to accept audio data.
         while true do
-            -- playing and full
-            -- speaker.playAudio will only execute when playback_state is "playing", cause de-morgans law bitch
+            
             if (playback_state=="playing" and speaker.playAudio(buffer)) then
                 break -- end loop and load in next buffered chunk.
             end
@@ -57,43 +70,31 @@ local function play_audio(content)
                 return arg2 -- Stop current playback to handle the new message
             elseif event == "mouse_click" then
 
+                print("mouse event pause")
+                received_pause = true
                 playback_state = "paused"
-
-
-                -- During this loop I need to check for any event basically that will pause
-                -- I could try a custom event or rednet from a monitor display pgrm.
-                -- or i could run a ui player in the console.
-                -- save and store chunk idx
-
-                -- if you mouse click, then this loop continues on and does nothing but checks for the next mouseclick.
-                -- most importantly speaker.playAudio(buffer) will not be called until the next mouse click.
-                -- i kinda do not wanna have the pause execution leave this function because then i will have to redownload from the server.
-                -- if i could get the rest of the song saved to a drive in this section, and i did return when recieving mouse)click event
-                -- then maybe i could call play_audio to a local file path. thats kinda a good solution because its not redownloading from the server? why is that a good idea?
-                -- either way on the unpause, i need to start from the chunk_idx that was saved.
-
-
-                print("Mouse click event paused")
+                -- write binary to a temp file maybe
             elseif event == "key" then
                 -- run unpause logic
                 print("Key event play")
                 playback_state = "playing"
                 -- the chunk stops incrementing when paused. so it will likely start over that chunk.
-                speaker.playAudio(buffer)
             elseif event == "speaker_audio_empty" then
                 -- Continue playing
             end
+            buffer_idx = buffer_idx + 1
         end
 
         -- increment current position of song by chunk size
         -- dont increment when paused.
-        if (playback_state=="playing") then
+        if playback_state == "playing" then
             chunk_idx = chunk_idx + chunk_size
         end
     end
 
     return nil
 end
+
 
 -- runs the song until websocket message is recieved then stops the current song and plays the song that is the target of the new message, the message being a link to an audio file on the python server.
 local function handle_websocket_message(message)
