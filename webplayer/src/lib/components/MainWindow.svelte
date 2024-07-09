@@ -107,6 +107,12 @@
     const tempLastState = lastState;
     lastState = state;
 
+    if (!state.paused) {
+      playing = true;
+    } else {
+      playing = false;
+    }
+
     if (
       state &&
       (tempLastState === null ||
@@ -122,7 +128,9 @@
         name: currentTrack.name,
         state: playbackStatus,
       };
-
+      player.pause().then(() => {
+        playing = false;
+      });
       ws.send(JSON.stringify(data));
     }
     title = state.track_window.current_track.name;
@@ -155,11 +163,11 @@
 
     // playing = !state.paused; this caused issues?
     //todo send specific events on play pause.
-    if (state.paused) {
-      playing = false;
-    } else {
-      playing = true;
-    }
+    // if (state.paused) {
+    //   playing = false;
+    // } else {
+    //   playing = true;
+    // }
     duration = state.duration;
     position = state.position;
     shuffle = state.shuffle;
@@ -169,9 +177,11 @@
   }
 
   let ws = new WebSocket("wss://racer-ultimate-literally.ngrok-free.app/ws");
+
   ws.onmessage = function (event) {
     console.log(event.data);
   };
+
   window.onSpotifyWebPlaybackSDKReady = async function () {
     console.log("sdk ready");
     // auth to spotify
@@ -381,8 +391,12 @@
     <button
       class="side"
       disabled={disallows.skipping_prev}
-      on:click={() => {
+      on:click={async () => {
         player.previousTrack();
+
+        await player.pause().then(() => {
+          playing = false;
+        });
       }}
     >
       <span class="material-symbols-rounded"> skip_previous </span>
@@ -400,8 +414,11 @@
     <button
       class="side"
       disabled={disallows.skipping_next}
-      on:click={() => {
+      on:click={async () => {
         player.nextTrack();
+        await player.pause().then(() => {
+          playing = false;
+        });
       }}
     >
       <span class="material-symbols-rounded"> skip_next </span>
