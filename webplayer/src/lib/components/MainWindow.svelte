@@ -107,11 +107,14 @@
     const tempLastState = lastState;
     lastState = state;
 
-    if (!state.paused) {
-      playing = true;
-    } else {
+    // if (!state.paused) {
+    //   playing = true;
+    // } else {
+    //   playing = false;
+    // }
+    player.pause().then(() => {
       playing = false;
-    }
+    });
 
     if (
       state &&
@@ -128,9 +131,6 @@
         name: currentTrack.name,
         state: playbackStatus,
       };
-      player.pause().then(() => {
-        playing = false;
-      });
       ws.send(JSON.stringify(data));
     }
     title = state.track_window.current_track.name;
@@ -391,10 +391,10 @@
     <button
       class="side"
       disabled={disallows.skipping_prev}
-      on:click={async () => {
+      on:click={() => {
         player.previousTrack();
 
-        await player.pause().then(() => {
+        player.pause().then(() => {
           playing = false;
         });
       }}
@@ -414,9 +414,9 @@
     <button
       class="side"
       disabled={disallows.skipping_next}
-      on:click={async () => {
+      on:click={() => {
         player.nextTrack();
-        await player.pause().then(() => {
+        player.pause().then(() => {
           playing = false;
         });
       }}
