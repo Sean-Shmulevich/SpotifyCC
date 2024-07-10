@@ -58,13 +58,14 @@ function dump(o)
     end
 end
 
-local function play_audio(content)
+local function play_audio(content, chunk_start)
     local decoder = dfpwm.make_decoder()
     local chunk_size = 16 * 1024
-    local chunk_idx = 1
+    local chunk_idx = chunk_start
     local playback_state = "playing"
     local prev_playback_state = "playing"
     local speaker_audio = nil
+    local prevChunk = nil
 
 
     -- these nested loops are a bit confusing but essentially, audio is buffered, by the outter loop in increments of chunk size
@@ -103,7 +104,7 @@ local function play_audio(content)
             elseif event == "mouse_click" and playback_state ~= "paused" then
                 -- how to get it to know when it stops
                 print("mouse event pause")
-                return buffer
+                return chunk_idx - ( chunk_size*2 ), "pause"
 
                 -- os.pullEvent("speaker_audio_empty") -- os.pullEvent() is a blocking function that waits for an event to occur, and then returns the event and its arguments
                 -- playback_state = "paused"
@@ -139,6 +140,7 @@ local function play_audio(content)
                 -- Continue playing
             end
         end
+
         
         -- if(playback_state == "paused") then
         --     local event, arg1, arg2 = os.pullEvent() -- os.pullEvent() is a blocking function that waits for an event to occur, and then returns the event and its arguments
@@ -170,21 +172,25 @@ local function handle_websocket_message(message)
     local song_content = download_audio(message)
 
     if song_content then
-        local song_replacement_url, state = play_audio(song_content) -- if not nil websocket message was recieved while playing audio
+        local song_replacement_url, state = play_audio(song_content, 1) -- if not nil websocket message was recieved while playing audio
         -- this loop will wait until playAudio is interrupted by a websocket message, then it will stop the current playback and download the new song and play it.
         while song_replacement_url do
-            print("Received new song while another was playing")
-            speaker.stop() -- Stop current playback
-            song_content, state = download_audio(song_replacement_url) -- Download new audio
             if song_content and state == "newSong" then
+                speaker.stop() -- Stop current playback
+                print("Received new song while another was playing")
+                song_content = download_audio(song_replacement_url) -- Download new audio
                 once = true
-                song_replacement_url = play_audio(song_content)
+                song_replacement_url, state = play_audio(song_content, 1)
             elseif song_content and state == "pause" then
                 -- i feel like it wont get the right buffer.
-                print(dump(song_content))
-                encoder = dfpwm.make_encoder()
-                local encoded = encoder(song_content)
-                speaker.playAudio(song_content)
+                -- encoder = dfpwm.make_encoder()
+                -- local encoded = encoder(song_content)
+                speaker.stop() -- Stop current playback
+                local keyUnpause = os.pullEvent("key")
+                if keyUnpause == "key" then
+                    print("Key event play")
+                    song_replacement_url, state = play_audio(song_content, song_replacement_url)
+                end
             else
                 song_replacement_url = nil
             end
