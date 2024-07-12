@@ -9,6 +9,7 @@ local box = pixelbox.new(term.current())
 
 local once = true
 local palette = {}
+local terminate = false
 
 
 
@@ -45,6 +46,11 @@ end
 
 local function download_audio(url)
     local song_data = httpGetWrapper(url)
+
+    if(song_data == nil) then
+        return nil
+    end
+
     return song_data
 end
 
@@ -86,7 +92,7 @@ local function play_audio(content, chunk_start)
                 break
             end
 
-            local event, arg1, arg2 = os.pullEvent() -- os.pullEvent() is a blocking function that waits for an event to occur, and then returns the event and its arguments
+            local event, arg1, arg2 = os.pullEventRaw() -- os.pullEvent() is a blocking function that waits for an event to occur, and then returns the event and its arguments
             -- if we are paused 
             -- only run this when playing or when paused but prev is playing
 
@@ -143,6 +149,11 @@ local function play_audio(content, chunk_start)
                 --     print("speaker audio not done yet")
                 -- end
                 -- write binary to a temp file maybe
+            elseif event=="terminate" then
+                ws.close()
+                speaker.stop()
+                terminate = true
+                return nil
             elseif event == "key" and playback_state ~= "playing" then
                 -- run unpause logic
                 -- print("Key event play")
@@ -201,19 +212,30 @@ end
 -- local bare_canvas = pixelbox.make_canvas()
 -- local usable_canvas = pixelbox.setup_canvas(box, bare_canvas)
 local function displayImage(img, palette)
-    local img_width, img_height = #img[1], #img-1
+    local img_size = #img[1]
     local term_width, term_height = box.width, box.height
+
+    if #img < #img[1] then
+        img_size = #img
+    end
+    
+    local center_offset = math.floor((term_width - img_size)/2)
+    -- for i = 1, img_size^2 do
+    --     local x = math.floor((i - 1) / img_size) + 1
+    --     local y = ((i - 1) % img_size) + 1
+    --     box.canvas[y][x] = img[y][x + center_offset]
+    -- end
+
 
     setPaletteColors(palette)
 
-    -- local center_offset = math.floor((term_width - img_width)/2)
-    for y = 1, img_height do
-        for x = 1, img_width do
+    for y = 1, img_size do
+        for x = 1, img_size do
             -- local r,g,b = img:get_pixel(x,y):unpack()
 
             -- print(colors.toBlit(colors.packRGB(r,g,b)))
             -- print(find_closest_color(r*255, g*255, b*255))
-            box.canvas[y][x] = img[y][x]
+            box.canvas[y][x+center_offset] = img[y][x]
             -- print(img[y][x])
         end
     end
@@ -250,13 +272,9 @@ local function handle_websocket_message(message)
         download_artwork(audio_url:sub(1, #audio_url - 5) .. "nfp")
 
         local img = paintutils.loadImage("temp.nfp")
-        local function playSongInit()
-            payload, state = play_audio(song_content, 1)
-        end
-        local function displayArtworkInit()
-            displayImage(img, img_palette)
-        end
-        parallel.waitForAll(playSongInit, displayArtworkInit)
+        displayImage(img, img_palette)
+        payload, state = play_audio(song_content, 1)
+        -- parallel.waitForAll(playSongInit, displayArtworkInit)
 
         -- this loop will wait until playAudio is interrupted by a websocket message, then it will stop the current playback and download the new song and play it.
         while payload do
@@ -275,14 +293,8 @@ local function handle_websocket_message(message)
 
                 box:clear(colors.black)
 
-                local function playSong()
-                    payload, state = play_audio(song_content, 1)
-                end
-                local function displayArtwork()
-                    setPaletteColors(textutils.unserialize(song_data["palette"]))
-                    displayImage(img, img_palette)
-                end
-                parallel.waitForAll(playSong, displayArtwork)
+                displayImage(img, img_palette)
+                payload, state = play_audio(song_content, 1)
 
 
             elseif song_content and state == "paused" then
@@ -321,11 +333,7 @@ repeat
         -- this function wont ever return.
         handle_websocket_message(message)
     end
-until false
-
-
+until terminate
 
 --todo listen for termination, make sure websocket is closed.
 -- todo, what happens when you get a 403 from youtube?
-speaker.stop()
-ws.close()
