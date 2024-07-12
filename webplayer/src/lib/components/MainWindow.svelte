@@ -129,7 +129,11 @@
         id: currentTrack.id,
         artist: currentTrack.artists[0].name,
         name: currentTrack.name,
-        state: playbackStatus,
+        albumName: currentTrack.album.name,
+        albumArt:
+          state.track_window.current_track.album.images[
+            findLargestImageIndex(state.track_window.current_track.album.images)
+          ].url,
       };
       ws.send(JSON.stringify(data));
     }

@@ -1,9 +1,14 @@
-local dfpwm = require("cc.audio.dfpwm")
-
 local baseURL = "https://racer-ultimate-literally.ngrok-free.app"
 local myURL = "wss://racer-ultimate-literally.ngrok-free.app/ws"
 local ws = assert(http.websocket(myURL))
+local dfpwm = require("cc.audio.dfpwm")
+
+local pixelbox = require("pixelbox_lite")
+
+local box = pixelbox.new(term.current())
+
 local once = true
+local palette = {}
 
 
 
@@ -43,20 +48,13 @@ local function download_audio(url)
     return song_data
 end
 
-
-
-function dump(o)
-    if type(o) == 'table' then
-        local s = '{ '
-        for k,v in pairs(o) do
-            if type(k) ~= 'number' then k = '"'..k..'"' end
-            s = s .. '['..k..'] = ' .. dump(v) .. ','
-        end
-        return s .. '} '
-    else
-        return tostring(o)
-    end
+local function download_artwork(url)
+    local song_data = httpGetWrapper(url)
+    io.open('temp.nfp', 'w+b'):write(song_data):close()
+    return "temp.nfp"
 end
+
+
 
 local function play_audio(content, chunk_start)
     local decoder = dfpwm.make_decoder()
@@ -64,6 +62,7 @@ local function play_audio(content, chunk_start)
     local chunk_idx = chunk_start
     local playback_state = "playing"
     local prev_playback_state = "playing"
+    local first_three_chunks = 0
     local speaker_audio = nil
     local prevChunk = nil
 
@@ -75,6 +74,7 @@ local function play_audio(content, chunk_start)
         local chunk = content:sub(chunk_idx, chunk_idx + chunk_size - 1)
         local buffer = decoder(chunk)
 
+        local startTime = os.epoch("utc") / 1000
 
         -- everything inside of this loop happens while the song is playing-
         -- for each filling and clearing of the chunked buffer
@@ -96,15 +96,34 @@ local function play_audio(content, chunk_start)
             -- event, arg1, arg2 = os.pullEvent() -- os.pullEvent() is a blocking function that waits for an event to occur, and then returns the event and its arguments
 
             if event == "websocket_message" and arg1 == myURL then -- arg1 represents the url of the websocket that sent the message
-                print("Received new song while playing")
+                -- print("Received new song while playing")
                 -- message could be next song or song change.
                 -- pause and skip are not played with this current implementation.
                 -- this contains the message sent from the websocket which in this case is the url of the new song created on the python server.
                 return arg2, "newSong" -- Stop current playback to handle the new message
             elseif event == "mouse_click" and playback_state ~= "paused" then
                 -- how to get it to know when it stops
-                print("mouse event pause")
-                return chunk_idx - ( chunk_size*2 ), "pause"
+                -- print("mouse event pause")
+                playback_state = "paused"
+                -- each loop iteration takes about 2.6 seconds to run.
+                local chunk_pause = os.epoch("utc") / 1000
+
+                -- this code is fucked up but it came from a lot of testing.
+                local percent = 1 + (((chunk_pause - startTime) / 2.65))
+                -- if the percent is too low, the pause will cause the song to skip ahead on unpause, and i rather the song go back a bit rather then forward.
+                -- if the value is more then 1.5 at all, then some of the chunk will be replayed.
+                -- theres some kinda of formula here that idk yet.
+                if(percent < 1.4) then
+                    percent = 3 - percent
+                end
+                
+
+
+                -- end
+
+                -- print("percent: " .. percent)
+                -- have to go almost 2 chunks back because chunk was just incremented at begining of loop.
+                return math.floor(chunk_idx - (chunk_size * percent)), "paused"
 
                 -- os.pullEvent("speaker_audio_empty") -- os.pullEvent() is a blocking function that waits for an event to occur, and then returns the event and its arguments
                 -- playback_state = "paused"
@@ -126,7 +145,7 @@ local function play_audio(content, chunk_start)
                 -- write binary to a temp file maybe
             elseif event == "key" and playback_state ~= "playing" then
                 -- run unpause logic
-                print("Key event play")
+                -- print("Key event play")
 
                 -- spotify_play()
                 -- it takes a sec for the pause route to run and the spotify api to respond.
@@ -141,11 +160,18 @@ local function play_audio(content, chunk_start)
             end
         end
 
+        local endTime = os.epoch("utc") / 1000
+        local displaced_time = endTime - startTime
+        -- print("Time to play chunk: " .. displaced_time)
+        if(first_three_chunks < 4) then
+            first_three_chunks = first_three_chunks + 1
+        end
+
         
         -- if(playback_state == "paused") then
         --     local event, arg1, arg2 = os.pullEvent() -- os.pullEvent() is a blocking function that waits for an event to occur, and then returns the event and its arguments
             
-        print("chunk done" .. tostring(chunk_idx))
+        -- print("chunk done" .. tostring(chunk_idx))
 
         -- increment current position of song by chunk size
         -- dont increment when paused.
@@ -155,11 +181,46 @@ local function play_audio(content, chunk_start)
 
     end
 
-    print("Song finished")
+    -- print("Song finished")
     spotify_next_track()
     -- send skip to next song on spotify
     return nil
 end
+
+local function setPaletteColors(colors)
+    for i=0,15 do
+        -- print(colors[i+1])
+        term.setPaletteColor(2^i, colors[i+1])
+        palette[2^i] = {term.getPaletteColor(2^i)}
+    end
+end
+
+-- Load the PNG image
+
+-- Create a bare canvas and set it up
+-- local bare_canvas = pixelbox.make_canvas()
+-- local usable_canvas = pixelbox.setup_canvas(box, bare_canvas)
+local function displayImage(img, palette)
+    local img_width, img_height = #img[1], #img-1
+    local term_width, term_height = box.width, box.height
+
+    setPaletteColors(palette)
+
+    -- local center_offset = math.floor((term_width - img_width)/2)
+    for y = 1, img_height do
+        for x = 1, img_width do
+            -- local r,g,b = img:get_pixel(x,y):unpack()
+
+            -- print(colors.toBlit(colors.packRGB(r,g,b)))
+            -- print(find_closest_color(r*255, g*255, b*255))
+            box.canvas[y][x] = img[y][x]
+            -- print(img[y][x])
+        end
+    end
+    box:render()
+end
+
+
 
 -- I want to make it so that when you skip a song, 
 -- The web player pauses until speaker.playAudio is called for the first time.
@@ -169,30 +230,77 @@ local function handle_websocket_message(message)
     -- i think i can omit this
     speaker.stop() -- Stop any currently playing audio
 
-    local song_content = download_audio(message)
+    -- local function a()
+    --     song_content = download_audio(message)
+    -- end
+    
+    -- local function b()
+    --     song_artwork = download_artwork(message)
+    -- end
+    -- parallel.waitForAll(a, b)
+    local song_data = textutils.unserializeJSON(message)
+
+    local audio_url = song_data["audio_file"]
+    local song_content = download_audio(audio_url)
+    local payload, state
+    -- song_artwork = download_artwork()
 
     if song_content then
-        local song_replacement_url, state = play_audio(song_content, 1) -- if not nil websocket message was recieved while playing audio
+        local img_palette = textutils.unserialize(song_data["palette"])
+        download_artwork(audio_url:sub(1, #audio_url - 5) .. "nfp")
+
+        local img = paintutils.loadImage("temp.nfp")
+        local function playSongInit()
+            payload, state = play_audio(song_content, 1)
+        end
+        local function displayArtworkInit()
+            displayImage(img, img_palette)
+        end
+        parallel.waitForAll(playSongInit, displayArtworkInit)
+
         -- this loop will wait until playAudio is interrupted by a websocket message, then it will stop the current playback and download the new song and play it.
-        while song_replacement_url do
+        while payload do
             if song_content and state == "newSong" then
                 speaker.stop() -- Stop current playback
-                print("Received new song while another was playing")
-                song_content = download_audio(song_replacement_url) -- Download new audio
-                once = true
-                song_replacement_url, state = play_audio(song_content, 1)
-            elseif song_content and state == "pause" then
+                -- print("Received new song while another was playing")
+                -- song_artwork = download_artwork()
+
+                song_data = textutils.unserializeJSON(payload)
+                audio_url = song_data["audio_file"]
+                song_content = download_audio(audio_url) -- Download new audio
+                img_palette = textutils.unserialize(song_data["palette"])
+
+                download_artwork( audio_url:sub(1, #audio_url - 5) .. "nfp" )
+                img = paintutils.loadImage("temp.nfp")
+
+                box:clear(colors.black)
+
+                local function playSong()
+                    payload, state = play_audio(song_content, 1)
+                end
+                local function displayArtwork()
+                    setPaletteColors(textutils.unserialize(song_data["palette"]))
+                    displayImage(img, img_palette)
+                end
+                parallel.waitForAll(playSong, displayArtwork)
+
+
+            elseif song_content and state == "paused" then
                 -- i feel like it wont get the right buffer.
+                -- in this case, payload is the chunk index! thats so stupid bro.
                 -- encoder = dfpwm.make_encoder()
                 -- local encoded = encoder(song_content)
                 speaker.stop() -- Stop current playback
                 local keyUnpause = os.pullEvent("key")
                 if keyUnpause == "key" then
-                    print("Key event play")
-                    song_replacement_url, state = play_audio(song_content, song_replacement_url)
+                    -- print("Key event play")
+                    payload, state = play_audio(song_content, payload)
                 end
             else
-                song_replacement_url = nil
+                -- i know we hit this when we finish a song but when else
+                spotify_next_track()
+                -- break out of loop and wait for new message.
+                payload = nil
             end
         end
     end
@@ -204,6 +312,7 @@ end
 -- this problem could be avoided if there was any way to do multithreading or asyncronous programming in cc:tweaked.
 repeat
     -- this is also only called once, most of the event checking is done in the play_audio function
+    -- make THIS ONE never time out.
     local event, socketUrl, message = os.pullEvent("websocket_message")
     --listens for websocket messages 
     if socketUrl == myURL then
@@ -214,6 +323,9 @@ repeat
     end
 until false
 
+
+
 --todo listen for termination, make sure websocket is closed.
 -- todo, what happens when you get a 403 from youtube?
+speaker.stop()
 ws.close()
