@@ -1,0 +1,15 @@
+- if you have spotify premium.
+- if you dont have spotify premium.
+
+# how to provide the app for other users.
+- With the streaming, it would be a bit harder
+- Problem, rn the backend and the frontend need to be connected to the spotify account
+
+## Flow
+ - User logs into webplayer, authenticate with spotify. 
+ - Download script on lua computer-craft. websocket sub-route for each user, provided in the frontend.
+ - user provides the websocket route to the lua computer-craft spotify program.
+
+- YTDL or Direct streaming options.
+- Unless you could get the stream redirection to go through the webserver, then that method has to require the webserver to be running on the same network as the computer-craft computer.
+
