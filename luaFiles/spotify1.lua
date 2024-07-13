@@ -2,6 +2,7 @@ local baseURL = "https://racer-ultimate-literally.ngrok-free.app"
 local myURL = "wss://racer-ultimate-literally.ngrok-free.app/ws"
 local ws = assert(http.websocket(myURL))
 local dfpwm = require("cc.audio.dfpwm")
+local lzw = require("lzw")
 
 local pixelbox = require("pixelbox_lite")
 
@@ -52,6 +53,12 @@ local function download_audio(url)
     end
 
     return song_data
+end
+
+local function get_album_img(url)
+    local compressed_img_data = httpGetWrapper(url)
+    local decompressed_data, err = lzw.decompress(compressed_img_data)
+    return paintutils.parseImage(decompressed_data)
 end
 
 local function download_artwork(url)
@@ -171,14 +178,6 @@ local function play_audio(content, chunk_start)
             end
         end
 
-        local endTime = os.epoch("utc") / 1000
-        local displaced_time = endTime - startTime
-        -- print("Time to play chunk: " .. displaced_time)
-        if(first_three_chunks < 4) then
-            first_three_chunks = first_three_chunks + 1
-        end
-
-        
         -- if(playback_state == "paused") then
         --     local event, arg1, arg2 = os.pullEvent() -- os.pullEvent() is a blocking function that waits for an event to occur, and then returns the event and its arguments
             
@@ -235,7 +234,7 @@ local function displayImage(img, palette)
 
             -- print(colors.toBlit(colors.packRGB(r,g,b)))
             -- print(find_closest_color(r*255, g*255, b*255))
-            box.canvas[y][x+center_offset] = img[y][x]
+            box.canvas[y+3][x+center_offset] = img[y][x]
             -- print(img[y][x])
         end
     end
@@ -265,13 +264,12 @@ local function handle_websocket_message(message)
     local audio_url = song_data["audio_file"]
     local song_content = download_audio(audio_url)
     local payload, state
-    -- song_artwork = download_artwork()
 
     if song_content then
         local img_palette = textutils.unserialize(song_data["palette"])
-        download_artwork(audio_url:sub(1, #audio_url - 5) .. "nfp")
+        -- try streaming the image using LZW.
+        local img = get_album_img(audio_url:sub(1, #audio_url - 5) .. "lzw")
 
-        local img = paintutils.loadImage("temp.nfp")
         displayImage(img, img_palette)
         payload, state = play_audio(song_content, 1)
         -- parallel.waitForAll(playSongInit, displayArtworkInit)
@@ -288,8 +286,7 @@ local function handle_websocket_message(message)
                 song_content = download_audio(audio_url) -- Download new audio
                 img_palette = textutils.unserialize(song_data["palette"])
 
-                download_artwork( audio_url:sub(1, #audio_url - 5) .. "nfp" )
-                img = paintutils.loadImage("temp.nfp")
+                img = get_album_img( audio_url:sub(1, #audio_url - 5) .. "lzw" )
 
                 box:clear(colors.black)
 
