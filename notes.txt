@@ -13,3 +13,4 @@
 - YTDL or Direct streaming options.
 - Unless you could get the stream redirection to go through the webserver, then that method has to require the webserver to be running on the same network as the computer-craft computer.
 
+austream wss://racer-ultimate-literally.ngrok-free.app/ws/song.wav streamAudio=true

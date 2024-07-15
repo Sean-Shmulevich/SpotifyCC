@@ -38,11 +38,21 @@ elseif path:match("^wss?://") then
     if not handle then error("Could not connect to " .. path .. ": " .. err) end
     local closed = false
     function data()
-        local _ = handle -- keep the handle alive
+        local ws = handle -- keep the handle alive
         if closed then return nil end
         while true do
-            local ev, url, msg, binary = os.pullEvent()
-            if ev == "websocket_message" and url == path then
+            local ev, url, msg, binary = os.pullEventRaw()
+            -- if ev == "key" then
+            --     print("Key pressed in stream data")
+            --     ws.send("stop")
+            --     print("Sent 'stop' message")
+            --     os.pullEvent("key")
+            --     ws.send("start")
+            --     print("Sent 'start' message")
+            if ev == "terminate" then
+                ws.close()
+                return nil
+            elseif ev == "websocket_message" and url == path then
                 if not binary then print("Warning: Text message detected! This audio may be corrupt.") end
                 return msg
             elseif ev == "websocket_closed" and url == path then

@@ -94,7 +94,6 @@ local function play_audio(content, chunk_start)
         -- speaker.playAudio(buffer) returns a boolean value, true if there is room to accept audio data.
 
         while true do
-            
             if(playback_state == "playing" and speaker.playAudio(buffer)) then
                 break
             end
@@ -114,6 +113,7 @@ local function play_audio(content, chunk_start)
                 -- pause and skip are not played with this current implementation.
                 -- this contains the message sent from the websocket which in this case is the url of the new song created on the python server.
                 return arg2, "newSong" -- Stop current playback to handle the new message
+
             elseif event == "mouse_click" and playback_state ~= "paused" then
                 -- how to get it to know when it stops
                 -- print("mouse event pause")

@@ -1,5 +1,4 @@
 local aukit = require "aukit"
-local loop = require "taskmaster"()
 
 local speakers = {peripheral.find("speaker")}
 if #speakers == 0 then error("No speaker attached") end
@@ -97,7 +96,7 @@ local w = term.getSize()
 local y = select(2, term.getCursorPos())
 local fg, bg = colors.toBlit(term.getTextColor()), colors.toBlit(term.getBackgroundColor())
 term.write(("00:00 %s %02d:%02d"):format(("\127"):rep(w - 12), math.floor(length / 60), length % 60))
-local function progress(pos)
+aukit.play(iter, function(pos)
     pos = math.min(pos, 5999)
     local p = pos / length
     term.setCursorPos(1, y)
@@ -105,26 +104,7 @@ local function progress(pos)
         term.blit(("%02d:%02d %s --:--"):format(math.floor(pos / 60), pos % 60, (" "):rep(w - 12)), fg:rep(w), bg:rep(6) .. fg:rep(w - 12) .. bg:rep(6))
     else
         term.blit(("%02d:%02d %s%s %02d:%02d"):format(math.floor(pos / 60), pos % 60, (" "):rep(math.floor((w - 12) * p)), ("\127"):rep((w - 12) - math.floor((w - 12) * p)), math.floor(length / 60), length % 60),
-        fg:rep(w), bg:rep(6) .. fg:rep(math.floor((w - 12) * p)) .. bg:rep((w - 12) - math.floor((w - 12) * p) + 6))
+            fg:rep(w), bg:rep(6) .. fg:rep(math.floor((w - 12) * p)) .. bg:rep((w - 12) - math.floor((w - 12) * p) + 6))
     end
-end
-local player = aukit.player(loop, iter, table.unpack(speakers))
-loop:addTask(function()
-    while true do
-        local event, param = os.pullEvent("key")
-        if param == keys.space then
-            if player.isPaused then player:play()
-            else player:pause() end
-        elseif param == keys.q then
-            player:stop()
-            return
-        end
-        progress(player:livePosition())
-    end
-end)
-loop:addTimer(0.25, function()
-    if player.playerTask == nil then return 0 end
-    progress(player:livePosition())
-end)
-loop:run(2)
-sleep(0)
+end, v.volume, table.unpack(speakers))
+print()
