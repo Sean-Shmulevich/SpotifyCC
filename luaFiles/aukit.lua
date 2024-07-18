@@ -1751,11 +1751,7 @@ function aukit.play(callback, progress, volume, ...)
     local chunks = {}
     local complete = false
     local playing = true
-    local previous_chunk = nil
-    local prev_prev = nil
-    local unfinishedChunk = nil
     local a, b = coroutine.create(function()
-            print("routine a playing")
             -- for chunk, pos in callback do
             --     for i = 1, 10 do
             --       table.remove(chunks)
@@ -1789,18 +1785,13 @@ function aukit.play(callback, progress, volume, ...)
                 end
             end
             for _, chunk in ipairs(chunklist) do
-                if previous_chunk == nil then previous_chunk = chunk end
-                if prev_prev == nil then prev_prev = previous_chunk end
                 for i, v in ipairs(speakers) do fn[i] = function()
-                    ::start_loop::
                     local name = peripheral.getName(v)
-                    local startTime = os.epoch("utc")
                     if _HOST:find("CraftOS-PC v2.6.4") and config and not config.get("standardsMode") then
                         v.playAudio(chunk[i] or chunk[1], volume)
                         -- here check for pause
                         repeat until select(2, os_pullEvent("speaker_audio_empty")) == name
                     else
-                        local startTime = os.epoch("utc")
                         while not v.playAudio(chunk[i] or chunk[1], volume) do
                         local ev, ev_name = os_pullEvent()
 
@@ -1808,46 +1799,7 @@ function aukit.play(callback, progress, volume, ...)
                         while ev ~= "speaker_audio_empty" and ev_name ~= name do
                             -- if ev == "speaker_audio_empty" and ev_name == name then
                             --     break
-                            if ev == "key" then
-                                for _, sp in ipairs(speakers) do sp.stop() end
-                                local stopTime = os.epoch("utc")
-                                -- local offsetTime = math.floor((startTime-stopTime)/10) * 48
-                                -- do not run most of this code for the speaker that stops second.
-
---                                 if unfinishedChunk ~= nil then
---                                     print("later pause event")
---                                     os_pullEvent("key")
---                                     -- for _, sp in ipairs(speakers) do
---                                     --     sp.playAudio(unfinishedChunk)
---                                     -- end
---                                     chunk[i] = prev_prev[i]
---                                     goto start_loop
---                                 end
-                                local percent = (stopTime-startTime)/1000
-                                print("percent "..percent)
-                                local currChunk = chunk[i] or chunk[1]
-                                local encoder = dfpwm.make_encoder()
-                                currChunk = encoder(currChunk)
-
-                                local offset = math.floor(#currChunk * percent)
-                                print("curr chunk size"..#currChunk)
-                                local decoder = dfpwm.make_decoder()
-                                local offsetChunk = currChunk:sub(offset, #currChunk - 1)
-                                print("offset size"..#offsetChunk)
-
-                                os_pullEvent("key")
-                                unfinishedChunk = decoder(offsetChunk)
-                                if not unfinishedChunk == nil then
-                                    print("unfinished chunk is nil")
-                                    chunk[i] = prev_prev[i]
-                                    goto start_loop
-                                end
-                                chunk[i] = prev_prev[i]
-                                goto start_loop
-
-                                -- v.playAudio(unfinishedChunk)
-
-                            elseif ev == "speaker_audio_empty" and ev_name == name then
+                            if ev == "speaker_audio_empty" and ev_name == name then
                                 break
                             end
                             ev, ev_name = os_pullEvent()
@@ -1862,10 +1814,18 @@ function aukit.play(callback, progress, volume, ...)
                         -- repeat until select(2, os_pullEvent("speaker_audio_empty")) == name
                     end end
                 end end
-                parallel.waitForAll(table_unpack(fn))
+                -- the goal rn is to just stop the audio on chunk.
+                local function stopOnChunk()
+                    if playing then playing = false end
+                    os_pullEvent("key")
+                    print("chunk stop para")
+                end
+                local function bothSpeakers()
+                    parallel.waitForAll(table_unpack(fn))
+                end
+
+                parallel.waitForAll(bothSpeakers, stopOnChunk)
             end
-            prev_prev = previous_chunk
-            previous_chunk = chunk
         end
     end)
     local ok, af, bf

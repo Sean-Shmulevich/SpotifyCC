@@ -2,7 +2,7 @@
 -- first just connect to the websocket server.
 local dfpwm = require("cc.audio.dfpwm")
 
-local myURL = "wss://racer-ultimate-literally.ngrok-free.app/ws"
+local myURL = "wss://racer-ultimate-literally.ngrok-free.app/api/endpoint/ws"
 local ws = assert(http.websocket(myURL))
 
 -- Ensure the speaker peripheral is attached

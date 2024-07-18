@@ -22,7 +22,7 @@
     <script>
         // var ws = new WebSocket("ws://localhost:7777/ws");
         let previousState = null;
-        var ws = new WebSocket("wss://racer-ultimate-literally.ngrok-free.app/ws");
+        var ws = new WebSocket("wss://racer-ultimate-literally.ngrok-free.app/api/endpoint/ws");
         ws.onmessage = function (event) {
             const messages = document.getElementById('messages')
             const message = document.createElement('li')
@@ -36,7 +36,7 @@
         }
         async function fetchToken() {
             try {
-                const response = await fetch("https://racer-ultimate-literally.ngrok-free.app/token");
+                const response = await fetch("racer-ultimate-literally.ngrok-free.app/api/endpoint/token");
                 // const response = await fetch('http://localhost:7777/token');
                 const data = await response.json();
                 if (data.token) {

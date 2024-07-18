@@ -180,11 +180,11 @@
     console.log(state);
   }
 
-  let ws = new WebSocket("wss://racer-ultimate-literally.ngrok-free.app/ws");
+  let ws = new WebSocket("wss://racer-ultimate-literally.ngrok-free.app/ws/webclient");
 
-  ws.onmessage = function (event) {
-    console.log(event.data);
-  };
+  // ws.onmessage = function (event) {
+  //   console.log(event.data);
+  // };
 
   window.onSpotifyWebPlaybackSDKReady = async function () {
     console.log("sdk ready");

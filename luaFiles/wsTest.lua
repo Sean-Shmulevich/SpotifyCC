@@ -1,6 +1,6 @@
 
-local baseURL = "https://racer-ultimate-literally.ngrok-free.app"
-local myURL = "wss://racer-ultimate-literally.ngrok-free.app/ws"
+local baseURL = "racer-ultimate-literally.ngrok-free.app/api/endpoint"
+local myURL = "wss://racer-ultimate-literally.ngrok-free.app/api/endpoint/ws"
 local ws = assert(http.websocket(myURL))
 
 repeat
