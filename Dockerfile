@@ -6,22 +6,22 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Set the working directory
-WORKDIR /code
+WORKDIR /app
 
-COPY ./spotify-to-mp3-python/requirements.txt /code/requirements.txt
+COPY ./spotify-to-mp3-python/requirements.txt /app/requirements.txt
  
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
+RUN pip install --no-cache-dir --upgrade -r /app/requirements.txt
 
-COPY ./spotify-to-mp3-python/main.py /code/spotify-to-mp3-python/main.py
-COPY ./spotify-to-mp3-python/static /code/static
-COPY ./spotify-to-mp3-python /code
+COPY ./spotify-to-mp3-python /app
+# COPY ./spotify-to-mp3-python/static /code/static
+# COPY ./spotify-to-mp3-python/static /code/spotify-to-mp3-python/static
 
 # 
-# COPY ./spotify-to-mp3-python/ code/spotify-to-mp3-python
+# COPY ./spotify-to-mp3-python /code/spotify-to-mp3-python
 
 # Expose the port FastAPI will run on
 EXPOSE 80
 
 # 
 # CMD ["fastapi", "run", "spotify-to-mp3-python/curr_playing.py", "--host", "0.0.0.0", "--port", "80"]
-CMD ["uvicorn", "spotify-to-mp3-python.main:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
