@@ -12,12 +12,9 @@ COPY ./spotify-to-mp3-python/requirements.txt /code/requirements.txt
  
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
+COPY ./spotify-to-mp3-python/main.py /code/spotify-to-mp3-python/main.py
 COPY ./spotify-to-mp3-python/static /code/static
-COPY ./spotify-to-mp3-python/songs /code/songs
-COPY ./spotify-to-mp3-python/pyx.py /code/pyx.py
-COPY ./spotify-to-mp3-python/lzw.py /code/lzw.py
-
-COPY ./spotify-to-mp3-python /code/spotify-to-mp3-python
+COPY ./spotify-to-mp3-python /code
 
 # 
 # COPY ./spotify-to-mp3-python/ code/spotify-to-mp3-python
@@ -26,5 +23,5 @@ COPY ./spotify-to-mp3-python /code/spotify-to-mp3-python
 EXPOSE 80
 
 # 
-CMD ["fastapi", "run", "spotify-to-mp3-python/curr_playing.py", "--host", "0.0.0.0", "--port", "80"]
-# CMD ["uvicorn", "spotify-to-mp3-python.curr_playing:app", "--host", "0.0.0.0", "--port", "80"]
+# CMD ["fastapi", "run", "spotify-to-mp3-python/curr_playing.py", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "spotify-to-mp3-python.main:app", "--host", "0.0.0.0", "--port", "80"]

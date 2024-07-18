@@ -1,18 +1,13 @@
-local baseURL = "racer-ultimate-literally.ngrok-free.app/api/endpoint"
-local myURL = "wss://racer-ultimate-literally.ngrok-free.app/api/endpoint/ws"
+local baseURL = "racer-ultimate-literally.ngrok-free.app"
+local myURL = string.format("wss://%s/ws/luaclient", baseURL)
 local ws = assert(http.websocket(myURL))
 local dfpwm = require("cc.audio.dfpwm")
 local lzw = require("lzw")
 
 local pixelbox = require("pixelbox_lite")
-
 local box = pixelbox.new(term.current())
 
-local once = true
-local palette = {}
 local terminate = false
-
-
 
 -- Ensure the speaker peripheral is attached
 local speaker = peripheral.find("speaker")
@@ -33,16 +28,8 @@ local function httpGetWrapper(url)
     end
 end
 
-local function spotify_play()
-    return httpGetWrapper(baseURL .. "/play")
-end
-
-local function spotify_pause()
-    return httpGetWrapper(baseURL .. "/pause")
-end
-
 local function spotify_next_track()
-    return httpGetWrapper(baseURL .. "/nextTrack")
+    return httpGetWrapper("https://"..baseURL .. "/nextTrack")
 end
 
 local function download_audio(url)
@@ -178,17 +165,9 @@ local function play_audio(content, chunk_start)
             end
         end
 
-        -- if(playback_state == "paused") then
-        --     local event, arg1, arg2 = os.pullEvent() -- os.pullEvent() is a blocking function that waits for an event to occur, and then returns the event and its arguments
-            
-        -- print("chunk done" .. tostring(chunk_idx))
-
-        -- increment current position of song by chunk size
-        -- dont increment when paused.
         if playback_state == "playing" then
             chunk_idx = chunk_idx + chunk_size
         end
-
     end
 
     -- print("Song finished")
@@ -201,7 +180,7 @@ local function setPaletteColors(colors)
     for i=0,15 do
         -- print(colors[i+1])
         term.setPaletteColor(2^i, colors[i+1])
-        palette[2^i] = {term.getPaletteColor(2^i)}
+        -- palette[2^i] = {term.getPaletteColor(2^i)}
     end
 end
 
@@ -251,14 +230,6 @@ local function handle_websocket_message(message)
     -- i think i can omit this
     speaker.stop() -- Stop any currently playing audio
 
-    -- local function a()
-    --     song_content = download_audio(message)
-    -- end
-    
-    -- local function b()
-    --     song_artwork = download_artwork(message)
-    -- end
-    -- parallel.waitForAll(a, b)
     local song_data = textutils.unserializeJSON(message)
 
     local audio_url = song_data["audio_file"]
@@ -295,10 +266,6 @@ local function handle_websocket_message(message)
 
 
             elseif song_content and state == "paused" then
-                -- i feel like it wont get the right buffer.
-                -- in this case, payload is the chunk index! thats so stupid bro.
-                -- encoder = dfpwm.make_encoder()
-                -- local encoded = encoder(song_content)
                 speaker.stop() -- Stop current playback
                 local keyUnpause = os.pullEvent("key")
                 if keyUnpause == "key" then

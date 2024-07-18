@@ -1,6 +1,5 @@
-
-local baseURL = "racer-ultimate-literally.ngrok-free.app/api/endpoint"
-local myURL = "wss://racer-ultimate-literally.ngrok-free.app/api/endpoint/ws"
+-- local baseURL = "racer-ultimate-literally.ngrok-free.app/api/endpoint"
+local myURL = "wss://racer-ultimate-literally.ngrok-free.app/ws/luaclient"
 local ws = assert(http.websocket(myURL))
 
 repeat
@@ -12,7 +11,7 @@ repeat
         -- this will only ever run once becasue then the execution gets stuck in the handle_websocket_message function (on purpose)
         print("Received message from " .. socketUrl .. " with contents " .. message)
         message = textutils.unserializeJSON(message)
-        print(message["palette"])
+        print(message)
 
         -- this function wont ever return.
     end
