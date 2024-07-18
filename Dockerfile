@@ -8,11 +8,10 @@ RUN apt-get update && \
 # Set the working directory
 WORKDIR /app
 
-COPY ./spotify-to-mp3-python/requirements.txt /app/requirements.txt
+COPY ./spotify-to-mp3-python /app
  
 RUN pip install --no-cache-dir --upgrade -r /app/requirements.txt
 
-COPY ./spotify-to-mp3-python /app
 # COPY ./spotify-to-mp3-python/static /code/static
 # COPY ./spotify-to-mp3-python/static /code/spotify-to-mp3-python/static
 
