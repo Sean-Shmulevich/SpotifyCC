@@ -1,4 +1,4 @@
-local baseURL = "racer-ultimate-literally.ngrok-free.app"
+local baseURL = "amused-consideration-production.up.railway.app"
 local myURL = string.format("wss://%s/ws/luaclient", baseURL)
 local ws = assert(http.websocket(myURL))
 local dfpwm = require("cc.audio.dfpwm")
@@ -7,7 +7,16 @@ local lzw = require("lzw")
 local pixelbox = require("pixelbox_lite")
 local box = pixelbox.new(term.current())
 
+local playButton = require("playButton")
+
 local terminate = false
+
+local paused_img = playButton.load_img("paused")
+local playing_img = playButton.load_img("playing")
+
+local start_x, start_y, end_x, end_y = playButton.get_touch_boundry(playing_img, "bottom-middle",box)
+local prev_start_x, prev_start_y, prev_end_x, prev_end_y = playButton.get_touch_boundry(playing_img, "left",box)
+local next_start_x, next_start_y, next_end_x, next_end_y = playButton.get_touch_boundry(paused_img, "right",box)
 
 -- Ensure the speaker peripheral is attached
 local speaker = peripheral.find("speaker")
@@ -85,23 +94,12 @@ local function play_audio(content, chunk_start)
                 break
             end
 
-            local event, arg1, arg2 = os.pullEventRaw() -- os.pullEvent() is a blocking function that waits for an event to occur, and then returns the event and its arguments
-            -- if we are paused 
-            -- only run this when playing or when paused but prev is playing
-
-            -- -- so its essentially pausing and checking for any events that are within its scope.
-            -- -- since play_audio function is nested in the websocket event loop it will be able to see when a websocket message is received when it pauses.
-            -- -- because of this, this loop will run essentially once per event recieved.
-            -- event, arg1, arg2 = os.pullEvent() -- os.pullEvent() is a blocking function that waits for an event to occur, and then returns the event and its arguments
+            local event, arg1, arg2, arg3 = os.pullEventRaw() -- os.pullEvent() is a blocking function that waits for an event to occur, and then returns the event and its arguments
 
             if event == "websocket_message" and arg1 == myURL then -- arg1 represents the url of the websocket that sent the message
-                -- print("Received new song while playing")
-                -- message could be next song or song change.
-                -- pause and skip are not played with this current implementation.
-                -- this contains the message sent from the websocket which in this case is the url of the new song created on the python server.
                 return arg2, "newSong" -- Stop current playback to handle the new message
 
-            elseif event == "mouse_click" and playback_state ~= "paused" then
+            elseif event == "monitor_touch" and playback_state ~= "paused" then
                 -- how to get it to know when it stops
                 -- print("mouse event pause")
                 playback_state = "paused"
@@ -110,20 +108,25 @@ local function play_audio(content, chunk_start)
 
                 -- this code is fucked up but it came from a lot of testing.
                 local percent = 1 + (((chunk_pause - startTime) / 2.65))
-                -- if the percent is too low, the pause will cause the song to skip ahead on unpause, and i rather the song go back a bit rather then forward.
-                -- if the value is more then 1.5 at all, then some of the chunk will be replayed.
-                -- theres some kinda of formula here that idk yet.
+
                 if(percent < 1.4) then
                     percent = 3 - percent
                 end
-                
+
+                local x = arg2
+                local y = arg3
+                if x >= start_x and x <= end_x and y >= start_y and y <= end_y then
+                    return math.floor(chunk_idx - (chunk_size * percent)), "paused"
+                elseif x >= next_start_x and x <= next_end_x and y >= next_start_y and y <= next_end_y then
+                elseif x >= prev_start_x and x <= prev_end_x and y >= prev_start_y and y <= prev_end_y then
+                    -- animation()
+                end
 
 
                 -- end
 
                 -- print("percent: " .. percent)
                 -- have to go almost 2 chunks back because chunk was just incremented at begining of loop.
-                return math.floor(chunk_idx - (chunk_size * percent)), "paused"
 
                 -- os.pullEvent("speaker_audio_empty") -- os.pullEvent() is a blocking function that waits for an event to occur, and then returns the event and its arguments
                 -- playback_state = "paused"
@@ -189,15 +192,18 @@ end
 -- Create a bare canvas and set it up
 -- local bare_canvas = pixelbox.make_canvas()
 -- local usable_canvas = pixelbox.setup_canvas(box, bare_canvas)
-local function displayImage(img, palette)
+local function load_album(img, palette)
     local img_size = #img[1]
     local term_width, term_height = box.width, box.height
 
     if #img < #img[1] then
         img_size = #img
     end
-    
+
     local center_offset = math.floor((term_width - img_size)/2)
+
+    local bare_canvas   = pixelbox.make_canvas()
+    local temp_canvas = pixelbox.setup_canvas(box,bare_canvas,colors.black)
     -- for i = 1, img_size^2 do
     --     local x = math.floor((i - 1) / img_size) + 1
     --     local y = ((i - 1) % img_size) + 1
@@ -213,11 +219,11 @@ local function displayImage(img, palette)
 
             -- print(colors.toBlit(colors.packRGB(r,g,b)))
             -- print(find_closest_color(r*255, g*255, b*255))
-            box.canvas[y+3][x+center_offset] = img[y][x]
+            temp_canvas[y+2][x+center_offset] = img[y][x]
             -- print(img[y][x])
         end
     end
-    box:render()
+    return temp_canvas
 end
 
 
@@ -241,7 +247,11 @@ local function handle_websocket_message(message)
         -- try streaming the image using LZW.
         local img = get_album_img(audio_url:sub(1, #audio_url - 5) .. "lzw")
 
-        displayImage(img, img_palette)
+        local album_canvas = load_album(img, img_palette)
+        album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box)
+        box:set_canvas(album_canvas)
+        box:render()
+
         payload, state = play_audio(song_content, 1)
         -- parallel.waitForAll(playSongInit, displayArtworkInit)
 
@@ -259,19 +269,28 @@ local function handle_websocket_message(message)
 
                 img = get_album_img( audio_url:sub(1, #audio_url - 5) .. "lzw" )
 
-                box:clear(colors.black)
+                album_canvas = load_album(img, img_palette)
+                album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box)
+                box:set_canvas(album_canvas)
+                box:render()
 
-                displayImage(img, img_palette)
                 payload, state = play_audio(song_content, 1)
 
 
             elseif song_content and state == "paused" then
                 speaker.stop() -- Stop current playback
-                local keyUnpause = os.pullEvent("key")
-                if keyUnpause == "key" then
-                    -- print("Key event play")
-                    payload, state = play_audio(song_content, payload)
+                album_canvas = playButton.add_playback_buttons(paused_img, album_canvas, box)
+                box:set_canvas(album_canvas)
+                box:render()
+                local event, side, x, y = os.pullEvent("monitor_touch")
+                if x >= start_x and x <= end_x and y >= start_y and y <= end_y then
+                    album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box)
+                    box:set_canvas(album_canvas)
+                    box:render()
+                elseif x >= next_start_x and x <= next_end_x and y >= next_start_y and y <= next_end_y then
+                elseif x >= prev_start_x and x <= prev_end_x and y >= prev_start_y and y <= prev_end_y then
                 end
+                payload, state = play_audio(song_content, payload)
             else
                 -- i know we hit this when we finish a song but when else
                 spotify_next_track()

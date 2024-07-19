@@ -180,7 +180,7 @@
     console.log(state);
   }
 
-  let ws = new WebSocket("wss://racer-ultimate-literally.ngrok-free.app/ws/webclient");
+  let ws = new WebSocket("wss://amused-consideration-production.up.railway.app/ws/webclient");
 
   // ws.onmessage = function (event) {
   //   console.log(event.data);
