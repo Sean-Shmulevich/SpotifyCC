@@ -308,12 +308,6 @@
           toast.push("Successfully connected to Spotify");
           return;
         }
-        //clear this when the page is closed.
-        const storedTrack = localStorage.getItem("storedTrack");
-        if (storedTrack) {
-          let data = JSON.parse(storedTrack);
-          ws.send(JSON.stringify(data));
-        }
       });
 
       player.addListener("player_state_changed", (state) => {

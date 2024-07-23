@@ -17,7 +17,7 @@ end
 
 
 local function load_img(img_name)
-    local img_url = "https://amused-consideration-production.up.railway.app/songs/" .. img_name .. ".lzw"
+    local img_url = "https://amused-consideration-production.up.railway.app/assets/" .. img_name .. ".lzw"
     local compressed_img_data = httpGetWrapper(img_url)
     -- print("Downloading image from " .. img_url)
 
