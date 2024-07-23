@@ -27,6 +27,7 @@
   import socketStore from "../wsStore";
 
   let ws = $socketStore;
+  export let socketConnection;
 
   let showOptions = false;
   let showAttributionMenu = false;
@@ -210,10 +211,27 @@
         .catch((error) => {
           console.error("Error going back", error);
         });
-    } else if (
-      message === "luaConnected" &&
-      JSON.stringify(lastState) !== "{}"
-    ) {
+    } else if (message === "luaConnected") {
+      if (JSON.stringify(lastState) !== "{}") {
+        let currentTrack = lastState.track_window.current_track;
+        let data = {
+          id: currentTrack.id,
+          artist: currentTrack.artists[0].name,
+          name: currentTrack.name,
+          albumName: currentTrack.album.name,
+          albumArt:
+            lastState.track_window.current_track.album.images[
+              findLargestImageIndex(
+                lastState.track_window.current_track.album.images
+              )
+            ].url,
+        };
+        ws.send(JSON.stringify(data));
+      }
+      socketConnection = true;
+    } else if (message == "luaDisconnect") {
+      console.log("caught lua disconnect");
+      localStorage.setItem("luaSocketConnected", JSON.stringify(false));
       let currentTrack = lastState.track_window.current_track;
       let data = {
         id: currentTrack.id,
@@ -227,7 +245,8 @@
             )
           ].url,
       };
-      ws.send(JSON.stringify(data));
+      localStorage.setItem("storedTrack", JSON.stringify(data));
+      socketConnection = false;
     }
   };
 
@@ -282,29 +301,18 @@
       });
 
       player.connect().then((success) => {
-        if (JSON.stringify(lastState) === "{}") {
-          player.getCurrentState().then((state) => {
-            let currentTrack = state.track_window.current_track;
-            let data = {
-              id: currentTrack.id,
-              artist: currentTrack.artists[0].name,
-              name: currentTrack.name,
-              albumName: currentTrack.album.name,
-              albumArt:
-                lastState.track_window.current_track.album.images[
-                  findLargestImageIndex(
-                    lastState.track_window.current_track.album.images
-                  )
-                ].url,
-            };
-            ws.send(JSON.stringify(data));
-          });
-        }
         if (success) {
           console.log(
             "The Web Playback SDK successfully connected to Spotify!"
           );
           toast.push("Successfully connected to Spotify");
+          return;
+        }
+        //clear this when the page is closed.
+        const storedTrack = localStorage.getItem("storedTrack");
+        if (storedTrack) {
+          let data = JSON.parse(storedTrack);
+          ws.send(JSON.stringify(data));
         }
       });
 

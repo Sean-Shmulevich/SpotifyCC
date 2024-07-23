@@ -25,14 +25,13 @@
     //what if lua is connected? before.
     if (!luaSocketConnected && message == "luaConnected") {
       localStorage.setItem("luaSocketConnected", JSON.stringify(true));
-    } else if (message == "luaDisconnect") {
-      localStorage.setItem("luaSocketConnected", JSON.stringify(false));
+      luaSocketConnected = true;
     }
   };
 </script>
 
 {#if luaSocketConnected}
-  <MainWindow />
+  <MainWindow bind:socketConnection={luaSocketConnected} />
 {:else}
   <div class="container">
     <div class="getting-started">
