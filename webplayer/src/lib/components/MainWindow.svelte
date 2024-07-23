@@ -210,7 +210,10 @@
         .catch((error) => {
           console.error("Error going back", error);
         });
-    } else if (message === "luaConnected") {
+    } else if (
+      message === "luaConnected" &&
+      JSON.stringify(lastState) !== "{}"
+    ) {
       let currentTrack = lastState.track_window.current_track;
       let data = {
         id: currentTrack.id,
@@ -279,6 +282,24 @@
       });
 
       player.connect().then((success) => {
+        if (JSON.stringify(lastState) === "{}") {
+          player.getCurrentState().then((state) => {
+            let currentTrack = state.track_window.current_track;
+            let data = {
+              id: currentTrack.id,
+              artist: currentTrack.artists[0].name,
+              name: currentTrack.name,
+              albumName: currentTrack.album.name,
+              albumArt:
+                lastState.track_window.current_track.album.images[
+                  findLargestImageIndex(
+                    lastState.track_window.current_track.album.images
+                  )
+                ].url,
+            };
+            ws.send(JSON.stringify(data));
+          });
+        }
         if (success) {
           console.log(
             "The Web Playback SDK successfully connected to Spotify!"

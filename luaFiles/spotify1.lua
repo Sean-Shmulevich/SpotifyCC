@@ -2,7 +2,6 @@ local args = {...}
 local userHash = args[1]
 local baseURL = "amused-consideration-production.up.railway.app"
 local myURL = string.format("wss://%s/ws/luaclient/%s", baseURL, userHash)
-local ws = assert(http.websocket(myURL))
 local dfpwm = require("cc.audio.dfpwm")
 local lzw = require("lzw")
 
@@ -21,6 +20,7 @@ local start_x, start_y, end_x, end_y = playButton.get_touch_boundry(playing_img,
 local prev_start_x, prev_start_y, prev_end_x, prev_end_y = playButton.get_touch_boundry(playing_img, "left",box)
 local next_start_x, next_start_y, next_end_x, next_end_y = playButton.get_touch_boundry(paused_img, "right",box)
 
+local ws = assert(http.websocket(myURL))
 -- Ensure the speaker peripheral is attached
 local speaker = peripheral.find("speaker")
 if not speaker then
@@ -72,7 +72,7 @@ end
 
 
 
-local function play_audio(content, chunk_start, canvas)
+local function play_audio(content, chunk_start, url)
     local decoder = dfpwm.make_decoder()
     local chunk_size = 16 * 1024
     local chunk_idx = chunk_start
@@ -103,7 +103,11 @@ local function play_audio(content, chunk_start, canvas)
             local event, arg1, arg2, arg3 = os.pullEventRaw() -- os.pullEvent() is a blocking function that waits for an event to occur, and then returns the event and its arguments
 
             if event == "websocket_message" and arg1 == myURL then -- arg1 represents the url of the websocket that sent the message
-                return arg2, "newSong" -- Stop current playback to handle the new message
+                local song_data = textutils.unserializeJSON(arg2)
+                local audio_url = song_data["audio_file"]
+                if audio_url ~= url then
+                    return arg2, "newSong" -- Stop current playback to handle the new message
+                end
             elseif skipOnce and event == "monitor_touch" and playback_state ~= "paused" then
                 -- how to get it to know when it stops
                 -- print("mouse event pause")
@@ -218,6 +222,7 @@ local function handle_websocket_message(message)
     -- i think i can omit this
     speaker.stop() -- Stop any currently playing audio
 
+
     local song_data = textutils.unserializeJSON(message)
 
     local audio_url = song_data["audio_file"]
@@ -241,7 +246,7 @@ local function handle_websocket_message(message)
             --
         --     checkLoading(album_canvas)
         -- end
-        payload, state = play_audio(song_content, 1, album_canvas)
+        payload, state = play_audio(song_content, 1, audio_url)
 
         -- this loop will wait until playAudio is interrupted by a websocket message, then it will stop the current playback and download the new song and play it.
         while payload do
@@ -264,7 +269,7 @@ local function handle_websocket_message(message)
                 box:render()
 
                 -- payload, state = play_audio(song_content, 1)
-                payload, state = play_audio(song_content, 1, album_canvas)
+                payload, state = play_audio(song_content, 1, audio_url)
                 -- parallel.waitForAny(wrap_play_audio, wrap_check_loading)
             elseif state == "loading" then
                 local pos = 1
@@ -296,7 +301,7 @@ local function handle_websocket_message(message)
                 parallel.waitForAny(showLoading, checkMsg)
 
                 -- payload, state = play_audio(song_content, 1)
-                payload, state = play_audio(song_content, 1, album_canvas)
+                payload, state = play_audio(song_content, 1, audio_url)
             elseif song_content and state == "paused" then
                 speaker.stop() -- Stop current playback
                 album_canvas = playButton.add_playback_buttons(paused_img, album_canvas, box)
@@ -326,7 +331,7 @@ local function handle_websocket_message(message)
                 parallel.waitForAny(checkUnpause, checkMsg)
                 box:set_canvas(album_canvas)
                 box:render()
-                payload, state = play_audio(song_content, payload, album_canvas)
+                payload, state = play_audio(song_content, payload, audio_url)
             else
                 -- i know we hit this when we finish a song but when else
                 spotify_next_track()
@@ -350,6 +355,7 @@ repeat
         -- this will only ever run once becasue then the execution gets stuck in the handle_websocket_message function (on purpose)
         -- print("Received message from " .. socketUrl .. " with contents " .. message)
         -- this function wont ever return.
+        print(message)
         handle_websocket_message(message)
     end
 until terminate
