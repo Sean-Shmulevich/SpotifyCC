@@ -191,7 +191,7 @@
 
   ws.onmessage = function (event) {
     let message = event.data;
-    console.log("message sent from lua");
+    console.log("message sent from lua" + message);
     if (message === "nextSong") {
       player
         .nextTrack()
@@ -210,6 +210,21 @@
         .catch((error) => {
           console.error("Error going back", error);
         });
+    } else if (message === "luaConnected") {
+      let currentTrack = lastState.track_window.current_track;
+      let data = {
+        id: currentTrack.id,
+        artist: currentTrack.artists[0].name,
+        name: currentTrack.name,
+        albumName: currentTrack.album.name,
+        albumArt:
+          lastState.track_window.current_track.album.images[
+            findLargestImageIndex(
+              lastState.track_window.current_track.album.images
+            )
+          ].url,
+      };
+      ws.send(JSON.stringify(data));
     }
   };
 

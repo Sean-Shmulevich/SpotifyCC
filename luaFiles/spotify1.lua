@@ -267,6 +267,7 @@ local function handle_websocket_message(message)
                 payload, state = play_audio(song_content, 1, album_canvas)
                 -- parallel.waitForAny(wrap_play_audio, wrap_check_loading)
             elseif state == "loading" then
+                local pos = 1
                 local function checkMsg()
                     local event, arg1, arg2 = os.pullEvent("websocket_message")
                     song_data = textutils.unserializeJSON(arg2)
@@ -277,24 +278,22 @@ local function handle_websocket_message(message)
                     img = get_album_img( audio_url:sub(1, #audio_url - 5) .. "lzw" )
                     album_canvas = load_album(img, img_palette)
                     album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box)
+                    box:set_canvas(album_canvas)
+                    box:render()
                 end
                 local function showLoading()
-                    local pos = 1
                     while true do
                         playButton.animation(box, album_canvas, pos)
                         box:set_canvas(album_canvas)
                         box:render()
-                        os.startTimer(0.2)
-                        os.pullEvent("timer")
                         pos = pos + 1
                         if pos == 10 then
                             pos = 1
                         end
+                        sleep(0.25)
                     end
                 end
-                parallel.waitForAny(checkMsg, showLoading)
-                box:set_canvas(album_canvas)
-                box:render()
+                parallel.waitForAny(showLoading, checkMsg)
 
                 -- payload, state = play_audio(song_content, 1)
                 payload, state = play_audio(song_content, 1, album_canvas)

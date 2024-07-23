@@ -17,11 +17,13 @@
   if (localStorage.getItem("luaSocketConnected") === null) {
     localStorage.setItem("luaSocketConnected", JSON.stringify(false));
   }
-  let luaSocketConnected = localStorage.getItem("luaSocketConnected");
+  let luaSocketConnected = JSON.parse(
+    localStorage.getItem("luaSocketConnected")
+  );
   ws.onmessage = function (event) {
     let message = event.data;
     //what if lua is connected? before.
-    if (message == "luaConnected") {
+    if (!luaSocketConnected && message == "luaConnected") {
       localStorage.setItem("luaSocketConnected", JSON.stringify(true));
     } else if (message == "luaDisconnect") {
       localStorage.setItem("luaSocketConnected", JSON.stringify(false));
