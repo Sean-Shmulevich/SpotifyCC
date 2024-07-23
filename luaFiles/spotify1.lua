@@ -81,6 +81,7 @@ local function play_audio(content, chunk_start, canvas)
     local first_three_chunks = 0
     local speaker_audio = nil
     local prevChunk = nil
+    local skipOnce = true
 
 
     -- these nested loops are a bit confusing but essentially, audio is buffered, by the outter loop in increments of chunk size
@@ -103,7 +104,7 @@ local function play_audio(content, chunk_start, canvas)
 
             if event == "websocket_message" and arg1 == myURL then -- arg1 represents the url of the websocket that sent the message
                 return arg2, "newSong" -- Stop current playback to handle the new message
-            elseif event == "monitor_touch" and playback_state ~= "paused" then
+            elseif skipOnce and event == "monitor_touch" and playback_state ~= "paused" then
                 -- how to get it to know when it stops
                 -- print("mouse event pause")
                 local x = arg2
@@ -121,10 +122,16 @@ local function play_audio(content, chunk_start, canvas)
                     end
                     return math.floor(chunk_idx - (chunk_size * percent)), "paused"
                 elseif x >= next_start_x and x <= next_end_x and y >= next_start_y and y <= next_end_y then
+                    if skipOnce then
+                        skipOnce = false
+                    end
                     spotify_next_track()
                     return "", "loading"
                     -- add loader until playing and disable button
                 elseif x >= prev_start_x and x <= prev_end_x and y >= prev_start_y and y <= prev_end_y then
+                    if skipOnce then
+                        skipOnce = false
+                    end
                     spotify_prev_track()
                     return "", "loading"
                     -- add loader until playing and disable button
@@ -296,19 +303,31 @@ local function handle_websocket_message(message)
                 album_canvas = playButton.add_playback_buttons(paused_img, album_canvas, box)
                 box:set_canvas(album_canvas)
                 box:render()
-                local event, side, x, y = os.pullEvent("monitor_touch")
-                if x >= start_x and x <= end_x and y >= start_y and y <= end_y then
-                    album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box)
-                    box:set_canvas(album_canvas)
-                    box:render()
-                    payload, state = play_audio(song_content, payload, album_canvas)
-                elseif x >= next_start_x and x <= next_end_x and y >= next_start_y and y <= next_end_y then
-                    spotify_next_track()
-                    -- add loader until playing
-                elseif x >= prev_start_x and x <= prev_end_x and y >= prev_start_y and y <= prev_end_y then
-                    spotify_prev_track()
-                    -- add loader until playing
+                local function checkUnpause()
+                    while true do
+                        local event, side, x, y = os.pullEvent("monitor_touch")
+                        if x >= start_x and x <= end_x and y >= start_y and y <= end_y then
+                            album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box)
+                            break
+                        end
+                    end
                 end
+                local function checkMsg()
+                    local event, arg1, arg2 = os.pullEvent("websocket_message")
+                    song_data = textutils.unserializeJSON(arg2)
+                    audio_url = song_data["audio_file"]
+                    song_content = download_audio(audio_url) -- Download new audio
+                    img_palette = textutils.unserialize(song_data["palette"])
+
+                    img = get_album_img( audio_url:sub(1, #audio_url - 5) .. "lzw" )
+                    album_canvas = load_album(img, img_palette)
+                    album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box)
+                    payload = 1
+                end
+                parallel.waitForAny(checkUnpause, checkMsg)
+                box:set_canvas(album_canvas)
+                box:render()
+                payload, state = play_audio(song_content, payload, album_canvas)
             else
                 -- i know we hit this when we finish a song but when else
                 spotify_next_track()
