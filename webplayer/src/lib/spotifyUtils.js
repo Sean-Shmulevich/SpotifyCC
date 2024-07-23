@@ -1,4 +1,4 @@
-import { redirectToAuthCodeFlow, newAccessToken, getAccessToken} from './spotifyUtils/auth.js'
+import { redirectToAuthCodeFlow, newAccessToken, getAccessToken } from './spotifyUtils/auth.js'
 
 import { setRepeat, setShuffle } from './spotifyUtils/playerApi.js'
 

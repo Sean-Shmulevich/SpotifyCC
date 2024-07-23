@@ -1,4 +1,10 @@
 <script>
+  // The user logs in, the svelte page shouldn't load at all until the socket is connected on both sides.
+  // Should I add this to the svelte? Or should I create another frontend for this.
+  // Generated hash should go into session storage, if either of the sockets
+  // are disconnected, display which one it is and prompt re-connection.
+  // don't show the player at all until both sockets are connected.
+  // if socket disconnects while playing. Redirect to socket page.
   import { tweened } from "svelte/motion";
   import { linear } from "svelte/easing";
 
@@ -18,6 +24,9 @@
 
   import SpotifyLogo from "../assets/Spotify.png";
   import SpotifyBlackLogo from "../assets/SpotifyBlack.png";
+  import socketStore from "../wsStore";
+
+  let ws = $socketStore;
 
   let showOptions = false;
   let showAttributionMenu = false;
@@ -177,17 +186,35 @@
     shuffle = state.shuffle;
     repeat = state.repeat_mode;
     disallows = state.disallows;
-    console.log(state);
+    // console.log(state);
   }
 
-  let ws = new WebSocket("wss://amused-consideration-production.up.railway.app/ws/webclient");
-
-  // ws.onmessage = function (event) {
-  //   console.log(event.data);
-  // };
+  ws.onmessage = function (event) {
+    let message = event.data;
+    console.log("message sent from lua");
+    if (message === "nextSong") {
+      player
+        .nextTrack()
+        .then(() => {
+          console.log("track has been skipped", error);
+        })
+        .catch((error) => {
+          console.error("Error skipping tracks", error);
+        });
+    } else if (message === "prevSong") {
+      player
+        .previousTrack()
+        .then(() => {
+          console.log("going to last track", error);
+        })
+        .catch((error) => {
+          console.error("Error going back", error);
+        });
+    }
+  };
 
   window.onSpotifyWebPlaybackSDKReady = async function () {
-    console.log("sdk ready");
+    // console.log("sdk ready");
     // auth to spotify
     const authCode = new URLSearchParams(window.location.search).get("code");
     if (authCode) {
@@ -248,8 +275,6 @@
       player.addListener("player_state_changed", (state) => {
         updatePlayerState(state);
       });
-
-      console.log(player);
     }
   };
 </script>

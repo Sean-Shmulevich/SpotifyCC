@@ -55,34 +55,26 @@ local function add_playback_buttons(img, temp_canvas, box)
     return temp_canvas
 end
 
-local function animation(box)
-    local animation_canvas = {}
-    for i=1,9  do
-        local img = load_img("load"..tostring(i))
-        local img_width, img_height = #img[1], #img-1
-        local start_y = math.floor(box.height - img_height - 2)
-        local start_x = math.floor((box.width - img_width)/2)
-        local bare_canvas   = pixelbox.make_canvas()
-        local temp_canvas = pixelbox.setup_canvas(box,bare_canvas,colors.black)
-        for y = 1, img_height do
-            for x = 1, img_width do
-                temp_canvas[y+start_y][x+start_x] = img[y][x]
-            end
-        end
-        animation_canvas[i] = temp_canvas
-    end
+local animation_canvas = {}
+for i=1,9 do
+    local img = load_img("load"..tostring(i))
+    animation_canvas[i] = img
+end
 
-    local pos = 1
-    while true do
-        box:set_canvas(animation_canvas[pos])
-        box:render()
-        pos = pos + 1
-        if pos == 10 then
-            pos = 1
+local function animation(box, temp_canvas, pos)
+
+    local img = animation_canvas[pos]
+    local img_width, img_height = #img[1], #img-1
+    local start_y = math.floor(box.height - img_height + 4)
+    local start_x = math.floor((box.width - img_width)/2)
+    for y = 1, img_height do
+        for x = 1, img_width do
+            temp_canvas[y+start_y][x+start_x] = colors.black
+            temp_canvas[y+start_y][x+start_x] = img[y][x]
         end
-        os.startTimer(0.15)
-        os.pullEvent('timer')
     end
+    -- box:set_canvas(temp_canvas)
+    -- return usable_canvas
 end
 
 local function get_touch_boundry(img, loc, box)
