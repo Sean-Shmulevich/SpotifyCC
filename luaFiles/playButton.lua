@@ -15,9 +15,39 @@ local function httpGetWrapper(url)
 end
 
 
+local function calculateHeight(box)
+    local monitor_width, monitor_height = box.width, box.height
+
+    local smaller_dimention = monitor_height
+    local smaller_img_dimention = 640
+
+    if monitor_height > monitor_width then
+        smaller_dimention = monitor_width
+    end
+
+    smaller_dimention = smaller_dimention*0.9
+    local pixel_size = math.floor(smaller_img_dimention/smaller_dimention) + 1
+    local actual_img_dimentions = math.floor(smaller_img_dimention/pixel_size)
+    local space_left = monitor_height - actual_img_dimentions
+    if space_left < 12 then
+        return 12
+    elseif space_left >= 35 then
+        return 35
+    end
+    return space_left
+end
+
+local function load_img_sized(img_name, imageSize)
+    local img_url = "https://amused-consideration-production.up.railway.app/luaImages/" .. img_name .."_" .. tostring(imageSize) .. ".lzw"
+    local compressed_img_data = httpGetWrapper(img_url)
+    -- print("Downloading image from " .. img_url)
+
+    local decompressed_data, err = lzw.decompress(compressed_img_data)
+    return paintutils.parseImage(decompressed_data)
+end
 
 local function load_img(img_name)
-    local img_url = "https://amused-consideration-production.up.railway.app/assets/" .. img_name .. ".lzw"
+    local img_url = "https://amused-consideration-production.up.railway.app/luaImages/" .. img_name .. ".lzw"
     local compressed_img_data = httpGetWrapper(img_url)
     -- print("Downloading image from " .. img_url)
 
@@ -26,10 +56,8 @@ local function load_img(img_name)
 end
 
 
-local next_song = load_img("next")
-local prev_song = load_img("prev")
 
-local function add_playback_buttons(img, temp_canvas, box)
+local function add_playback_buttons(img, temp_canvas, box, next_song, prev_song)
     local img_width, img_height = #img[1], #img-1
 
     --next song icon and prev size icons are the same.
@@ -101,5 +129,7 @@ return {
     get_touch_boundry = get_touch_boundry,
     animation = animation,
     load_img = load_img,
+    load_img_sized = load_img_sized,
+    calculateHeight = calculateHeight,
     add_playback_buttons = add_playback_buttons
 }

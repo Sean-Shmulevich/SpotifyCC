@@ -13,14 +13,22 @@ local playButton = require("playButton")
 local terminate = false
 local loading = false
 
-local paused_img = playButton.load_img("paused")
-local playing_img = playButton.load_img("playing")
+local mediaSize = playButton.calculateHeight(box)
+local paused_img = playButton.load_img_sized("paused", mediaSize)
+local playing_img = playButton.load_img_sized("playing", mediaSize)
+local next_img = playButton.load_img_sized("next", mediaSize)
+local prev_img = playButton.load_img_sized("prev", mediaSize)
+-- local paused_img = playButton.load_img("paused")
+-- local playing_img = playButton.load_img("playing")
+-- local next_img = playButton.load_img("next")
+-- local prev_img = playButton.load_img("prev")
 
 local start_x, start_y, end_x, end_y = playButton.get_touch_boundry(playing_img, "bottom-middle",box)
 local prev_start_x, prev_start_y, prev_end_x, prev_end_y = playButton.get_touch_boundry(playing_img, "left",box)
 local next_start_x, next_start_y, next_end_x, next_end_y = playButton.get_touch_boundry(paused_img, "right",box)
 
 local ws = assert(http.websocket(myURL))
+ws.send(tostring(box.width) .." ".. tostring(box.height))
 -- Ensure the speaker peripheral is attached
 local speaker = peripheral.find("speaker")
 if not speaker then
@@ -49,7 +57,7 @@ local function spotify_prev_track()
 end
 
 local function download_audio(url)
-    local song_data = httpGetWrapper(url)
+    local song_data = httpGetWrapper("https://" .. baseURL .. "/" .. url)
 
     if(song_data == nil) then
         return nil
@@ -59,17 +67,10 @@ local function download_audio(url)
 end
 
 local function get_album_img(url)
-    local compressed_img_data = httpGetWrapper(url)
+    local compressed_img_data = httpGetWrapper("https://" .. baseURL .. "/" .. url)
     local decompressed_data, err = lzw.decompress(compressed_img_data)
     return paintutils.parseImage(decompressed_data)
 end
-
-local function download_artwork(url)
-    local song_data = httpGetWrapper(url)
-    io.open('temp.nfp', 'w+b'):write(song_data):close()
-    return "temp.nfp"
-end
-
 
 
 local function play_audio(content, chunk_start, url)
@@ -205,7 +206,7 @@ local function load_album(img, palette)
 
             -- print(colors.toBlit(colors.packRGB(r,g,b)))
             -- print(find_closest_color(r*255, g*255, b*255))
-            temp_canvas[y+2][x+center_offset] = img[y][x]
+            temp_canvas[y][x+center_offset] = img[y][x]
             -- print(img[y][x])
         end
     end
@@ -226,16 +227,18 @@ local function handle_websocket_message(message)
     local song_data = textutils.unserializeJSON(message)
 
     local audio_url = song_data["audio_file"]
+    local img_url = song_data["album_img"]
     local song_content = download_audio(audio_url)
     local payload, state
 
     if song_content then
         local img_palette = textutils.unserialize(song_data["palette"])
         -- try streaming the image using LZW.
-        local img = get_album_img(audio_url:sub(1, #audio_url - 5) .. "lzw")
+        print(img_url)
+        local img = get_album_img(img_url)
 
         local album_canvas = load_album(img, img_palette)
-        album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box)
+        album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
         box:set_canvas(album_canvas)
         box:render()
 
@@ -258,13 +261,14 @@ local function handle_websocket_message(message)
 
                 song_data = textutils.unserializeJSON(payload)
                 audio_url = song_data["audio_file"]
+                img_url = song_data["album_img"]
                 song_content = download_audio(audio_url) -- Download new audio
                 img_palette = textutils.unserialize(song_data["palette"])
 
-                img = get_album_img( audio_url:sub(1, #audio_url - 5) .. "lzw" )
+                img = get_album_img(img_url)
 
                 album_canvas = load_album(img, img_palette)
-                album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box)
+                album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
                 box:set_canvas(album_canvas)
                 box:render()
 
@@ -277,12 +281,13 @@ local function handle_websocket_message(message)
                     local event, arg1, arg2 = os.pullEvent("websocket_message")
                     song_data = textutils.unserializeJSON(arg2)
                     audio_url = song_data["audio_file"]
+                    img_url = song_data["album_img"]
                     song_content = download_audio(audio_url) -- Download new audio
                     img_palette = textutils.unserialize(song_data["palette"])
 
-                    img = get_album_img( audio_url:sub(1, #audio_url - 5) .. "lzw" )
+                    img = get_album_img(img_url)
                     album_canvas = load_album(img, img_palette)
-                    album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box)
+                    album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
                     box:set_canvas(album_canvas)
                     box:render()
                 end
@@ -304,14 +309,14 @@ local function handle_websocket_message(message)
                 payload, state = play_audio(song_content, 1, audio_url)
             elseif song_content and state == "paused" then
                 speaker.stop() -- Stop current playback
-                album_canvas = playButton.add_playback_buttons(paused_img, album_canvas, box)
+                album_canvas = playButton.add_playback_buttons(paused_img, album_canvas, box, next_img, prev_img)
                 box:set_canvas(album_canvas)
                 box:render()
                 local function checkUnpause()
                     while true do
                         local event, side, x, y = os.pullEvent("monitor_touch")
                         if x >= start_x and x <= end_x and y >= start_y and y <= end_y then
-                            album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box)
+                            album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
                             break
                         end
                     end
@@ -320,12 +325,13 @@ local function handle_websocket_message(message)
                     local event, arg1, arg2 = os.pullEvent("websocket_message")
                     song_data = textutils.unserializeJSON(arg2)
                     audio_url = song_data["audio_file"]
+                    img_url = song_data["album_img"]
                     song_content = download_audio(audio_url) -- Download new audio
                     img_palette = textutils.unserialize(song_data["palette"])
 
-                    img = get_album_img( audio_url:sub(1, #audio_url - 5) .. "lzw" )
+                    img = get_album_img(img_url)
                     album_canvas = load_album(img, img_palette)
-                    album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box)
+                    album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
                     payload = 1
                 end
                 parallel.waitForAny(checkUnpause, checkMsg)
@@ -355,7 +361,7 @@ repeat
         -- this will only ever run once becasue then the execution gets stuck in the handle_websocket_message function (on purpose)
         -- print("Received message from " .. socketUrl .. " with contents " .. message)
         -- this function wont ever return.
-        print(message)
+        -- print(message)
         handle_websocket_message(message)
     end
 until terminate

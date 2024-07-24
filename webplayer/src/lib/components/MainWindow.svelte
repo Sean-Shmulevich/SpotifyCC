@@ -218,7 +218,7 @@
           id: currentTrack.id,
           artist: currentTrack.artists[0].name,
           name: currentTrack.name,
-          albumName: currentTrack.album.name,
+          albumName: currentTrack.album.id,
           albumArt:
             lastState.track_window.current_track.album.images[
               findLargestImageIndex(
