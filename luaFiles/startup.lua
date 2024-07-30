@@ -87,7 +87,6 @@ function testMediaControls(x,y, monitor)
             elseif playState == PlayStates.PAUSED then
                 playState = PlayStates.PLAYING
             end
-            
         elseif x >= 12 and x <= 18 then
             if queue[1] then
                 playSong(queue[1])

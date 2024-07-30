@@ -1,6 +1,110 @@
+
 local args = {...}
 local userHash = args[1]
 local baseURL = "amused-consideration-production.up.railway.app"
+local terminalMode = false
+
+local function httpGetWrapper(url)
+    local response = http.get(url)
+    if response then
+        local content = response.readAll()
+        response.close()
+        return content
+    else
+        print("Failed to download the file from URL: " .. url)
+        return nil
+    end
+end
+
+local function userHashOk(hash)
+    local checkHashOk = httpGetWrapper("https://"..baseURL .. "/checkHash/" .. hash)
+    if checkHashOk then
+        checkHashOk = textutils.unserialize(checkHashOk)
+    end
+    if checkHashOk == "ok" then
+        return true
+    end
+    return false
+end
+
+local speaker = peripheral.find("speaker")
+if not speaker then
+    print("No speaker found. Please attach a speaker.")
+    return
+end
+
+if not userHash then
+    print("userHash not provided check the website for your user hash, press any key to continue.")
+    os.pullEvent("key")
+    do return end
+end
+
+if not userHashOk(userHash) then
+    print("userHash provided is invalid, please check the website for your correct user hash, press any key to continue")
+    os.pullEvent("key")
+    do return end
+end
+
+local monitor = nil
+local playerModeOrLoc = args[2]
+local playerMode = "monitor"
+local monitorLocation = "top"
+-- has monitor attached and no arg3.   
+local peripheralArr = { "top", "left", "right", "back", "front", "bottom" }
+
+local function tableContains(table, value)
+  for i = 1,#table do
+    if (table[i] == value) then
+      return true
+    end
+  end
+  return false
+end
+
+if playerModeOrLoc then
+    if tableContains(peripheralArr, playerModeOrLoc) then
+        monitorLocation = playerModeOrLoc
+    elseif playerModeOrLoc == "terminal" then
+        playerMode = playerModeOrLoc
+    elseif playerModeOrLoc == "monitor" and args[3] then
+        if tableContains(peripheralArr, arg[3]) then
+            monitorLocation = arg[3]
+        else
+            print("Invalid argument #3 \""..arg[3].."\"" .. " must be monitor location\n 'top', 'left', 'right', 'back', 'front', 'bottom'")
+            do return end
+        end
+    else
+        print("Invalid argument #2 \""..playerModeOrLoc.."\"")
+        do return end
+    end
+end
+
+if playerMode == "monitor" then
+    for i,v in pairs(peripheralArr) do
+        local peripheralType = peripheral.getType(v)
+        if peripheralType and peripheralType == "monitor" then
+            if monitorLocation and monitorLocation == v then
+                monitor = peripheral.wrap(v)
+                print("found specified monitor ".. v)
+                break
+            end
+        end
+    end
+end
+
+-- for playermode terminal, dont show the media buttons.
+if playerMode == "terminal" then
+    term.clear()
+    terminalMode = true
+elseif monitor ~= nil and playerMode == "monitor" then
+    monitor.setTextScale(0.5)
+    term.redirect(monitor)
+elseif monitor == nil and playerMode == "monitor" then
+    print("monitor not found press key to end the program")
+    os.pullEvent("key")
+    do return end
+end
+-- call validate hash endpoint.
 local myURL = string.format("wss://%s/ws/luaclient/%s", baseURL, userHash)
 local dfpwm = require("cc.audio.dfpwm")
 local lzw = require("lzw")
@@ -15,41 +119,40 @@ local playButton = require("playButton")
 
 local terminate = false
 local jsConnected = false
+local monitors = {}
+
+-- if theres no monitors run in terminal mode.
+local function populateMonitors()
+    local Ms = { peripheral.find("monitor") }
+    monitors = {}
+    for i,v in pairs(Ms) do
+        table.insert(monitors, {
+            ["monitor"] = v,
+            ["page"] = 1
+        })
+    end
+end
 
 local mediaSize = playButton.calculateHeight(box)
-local paused_img = playButton.load_img_sized("paused", mediaSize)
-local playing_img = playButton.load_img_sized("playing", mediaSize)
-local next_img = playButton.load_img_sized("next", mediaSize)
-local prev_img = playButton.load_img_sized("prev", mediaSize)
--- local paused_img = playButton.load_img("paused")
--- local playing_img = playButton.load_img("playing")
--- local next_img = playButton.load_img("next")
--- local prev_img = playButton.load_img("prev")
+local paused_img, playing_img, next_img, prev_img
+local next_start_x, next_start_y, next_end_x, next_end_y
+local prev_start_x, prev_start_y, prev_end_x, prev_end_y
+local start_x, start_y, end_x, end_y
 
-local start_x, start_y, end_x, end_y = playButton.get_touch_boundry(playing_img, "bottom-middle",box)
-local prev_start_x, prev_start_y, prev_end_x, prev_end_y = playButton.get_touch_boundry(playing_img, "left",box)
-local next_start_x, next_start_y, next_end_x, next_end_y = playButton.get_touch_boundry(paused_img, "right",box)
+paused_img = playButton.load_img_sized("paused", mediaSize)
+playing_img = playButton.load_img_sized("playing", mediaSize)
+if not terminalMode then
+    next_img = playButton.load_img_sized("next", mediaSize)
+    prev_img = playButton.load_img_sized("prev", mediaSize)
+    start_x, start_y, end_x, end_y = playButton.get_touch_boundry(playing_img, "bottom-middle",box)
+    prev_start_x, prev_start_y, prev_end_x, prev_end_y = playButton.get_touch_boundry(playing_img, "left",box)
+    next_start_x, next_start_y, next_end_x, next_end_y = playButton.get_touch_boundry(paused_img, "right",box)
+end
+
 
 local ws = assert(http.websocket(myURL))
 ws.send(tostring(box.width) .." ".. tostring(box.height))
 -- Ensure the speaker peripheral is attached
-local speaker = peripheral.find("speaker")
-if not speaker then
-    print("No speaker found. Please attach a speaker.")
-    return
-end
-
-local function httpGetWrapper(url)
-    local response = http.get(url)
-    if response then
-        local content = response.readAll()
-        response.close()
-        return content
-    else
-        print("Failed to download the file from URL: " .. url)
-        return nil
-    end
-end
 
 local function spotify_next_track()
     return httpGetWrapper("https://"..baseURL .. "/nextTrack/" .. userHash)
@@ -121,12 +224,16 @@ local function play_audio(content, chunk_start, url)
                 if audio_url ~= nil and audio_url ~= url then
                     return arg2, "newSong" -- Stop current playback to handle the new message
                 end
-            elseif skipOnce and event == "monitor_touch" and playback_state ~= "paused" then
+            elseif skipOnce and ( event == "monitor_touch" or event =="key" ) and playback_state ~= "paused" then
                 -- how to get it to know when it stops
                 -- print("mouse event pause")
+                local key = arg1
                 local x = arg2
                 local y = arg3
-                if x >= start_x and x <= end_x and y >= start_y and y <= end_y then
+                if event == "key" then
+                    key = keys.getName(key)
+                end
+                if terminalMode and key=="space" or event~="key" and x >= start_x and x <= end_x and y >= start_y and y <= end_y then
                     playback_state = "paused"
                     -- each loop iteration takes about 2.6 seconds to run.
                     local chunk_pause = os.epoch("utc") / 1000
@@ -138,7 +245,7 @@ local function play_audio(content, chunk_start, url)
                         percent = 3 - percent
                     end
                     return math.floor(chunk_idx - (chunk_size * percent)), "paused"
-                elseif x >= next_start_x and x <= next_end_x and y >= next_start_y and y <= next_end_y then
+                elseif terminalMode and key=="right" or event~="key" and x >= next_start_x and x <= next_end_x and y >= next_start_y and y <= next_end_y then
                     if jsConnected then
                         if skipOnce then
                             skipOnce = false
@@ -149,7 +256,7 @@ local function play_audio(content, chunk_start, url)
                         print("cannot skip, web is client disconnected. try reloading https://amused-consideration-production.up.railway.app/")
                     end
                     -- add loader until playing and disable button
-                elseif x >= prev_start_x and x <= prev_end_x and y >= prev_start_y and y <= prev_end_y then
+                elseif terminalMode and key=="left" or event~="key" and x >= prev_start_x and x <= prev_end_x and y >= prev_start_y and y <= prev_end_y then
                     if jsConnected then
                         if skipOnce then
                             skipOnce = false
@@ -270,7 +377,9 @@ local function handle_websocket_message(message)
         local img = get_album_img(img_url)
 
         local album_canvas = load_album(img, img_palette)
-        album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
+        if not terminalMode then
+            album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
+        end
         box:set_canvas(album_canvas)
         box:render()
 
@@ -300,7 +409,9 @@ local function handle_websocket_message(message)
                 img = get_album_img(img_url)
 
                 album_canvas = load_album(img, img_palette)
-                album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
+                if not terminalMode then
+                    album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
+                end
                 box:set_canvas(album_canvas)
                 box:render()
 
@@ -327,7 +438,9 @@ local function handle_websocket_message(message)
 
                     img = get_album_img(img_url)
                     album_canvas = load_album(img, img_palette)
-                    album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
+                    if not terminalMode then
+                        album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
+                    end
                     box:set_canvas(album_canvas)
                     box:render()
                 end
@@ -349,14 +462,25 @@ local function handle_websocket_message(message)
                 payload, state = play_audio(song_content, 1, audio_url)
             elseif song_content and state == "paused" then
                 speaker.stop() -- Stop current playback
-                album_canvas = playButton.add_playback_buttons(paused_img, album_canvas, box, next_img, prev_img)
+                if not terminalMode then
+                    album_canvas = playButton.add_playback_buttons(paused_img, album_canvas, box, next_img, prev_img)
+                end
                 box:set_canvas(album_canvas)
                 box:render()
                 local function checkUnpause()
                     while true do
-                        local event, side, x, y = os.pullEvent("monitor_touch")
-                        if x >= start_x and x <= end_x and y >= start_y and y <= end_y then
-                            album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
+                        local event, side, x, y
+                        local key = nil
+                        if not terminalMode then
+                            event, side, x, y = os.pullEvent("monitor_touch")
+                        else
+                            event, side, x, y = os.pullEvent("key")
+                            key = keys.getName(side)
+                        end
+                        if key=="space" or x >= start_x and x <= end_x and y >= start_y and y <= end_y then
+                            if not terminalMode then
+                                album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
+                            end
                             break
                         end
                     end
@@ -379,7 +503,9 @@ local function handle_websocket_message(message)
 
                     img = get_album_img(img_url)
                     album_canvas = load_album(img, img_palette)
-                    album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
+                    if not terminalMode then
+                        album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
+                    end
                     payload = 1
                 end
                 parallel.waitForAny(checkUnpause, checkMsg)
