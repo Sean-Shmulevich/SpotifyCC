@@ -11,7 +11,7 @@ local box = pixelbox.new(term.current())
 local playButton = require("playButton")
 
 local terminate = false
-local loading = false
+local jsConnected = false
 
 local mediaSize = playButton.calculateHeight(box)
 local paused_img = playButton.load_img_sized("paused", mediaSize)
@@ -104,9 +104,16 @@ local function play_audio(content, chunk_start, url)
             local event, arg1, arg2, arg3 = os.pullEventRaw() -- os.pullEvent() is a blocking function that waits for an event to occur, and then returns the event and its arguments
 
             if event == "websocket_message" and arg1 == myURL then -- arg1 represents the url of the websocket that sent the message
-                local song_data = textutils.unserializeJSON(arg2)
-                local audio_url = song_data["audio_file"]
-                if audio_url ~= url then
+                local song_data = arg2
+                local audio_url = nil
+                if arg2 ~= "jsDisconnect" then
+                    song_data = textutils.unserializeJSON(arg2)
+                    audio_url = song_data["audio_file"]
+                elseif arg2 == "jsDisconnect" then
+                    jsConnected = false
+                end
+
+                if audio_url ~= nil and audio_url ~= url then
                     return arg2, "newSong" -- Stop current playback to handle the new message
                 end
             elseif skipOnce and event == "monitor_touch" and playback_state ~= "paused" then
@@ -127,18 +134,26 @@ local function play_audio(content, chunk_start, url)
                     end
                     return math.floor(chunk_idx - (chunk_size * percent)), "paused"
                 elseif x >= next_start_x and x <= next_end_x and y >= next_start_y and y <= next_end_y then
-                    if skipOnce then
-                        skipOnce = false
+                    if jsConnected then
+                        if skipOnce then
+                            skipOnce = false
+                        end
+                        spotify_next_track()
+                        return "", "loading"
+                    else
+                        print("cannot skip, web is client disconnected. try reloading https://amused-consideration-production.up.railway.app/")
                     end
-                    spotify_next_track()
-                    return "", "loading"
                     -- add loader until playing and disable button
                 elseif x >= prev_start_x and x <= prev_end_x and y >= prev_start_y and y <= prev_end_y then
-                    if skipOnce then
-                        skipOnce = false
+                    if jsConnected then
+                        if skipOnce then
+                            skipOnce = false
+                        end
+                        spotify_prev_track()
+                        return "", "loading"
+                    else
+                        print("cannot skip, web client is disconnected. try reloading https://amused-consideration-production.up.railway.app/")
                     end
-                    spotify_prev_track()
-                    return "", "loading"
                     -- add loader until playing and disable button
                 end
             elseif event=="terminate" then
@@ -158,8 +173,18 @@ local function play_audio(content, chunk_start, url)
         end
     end
 
+    if not jsConnected then
+        -- loading until the webplayer is reloaded.
+        box:clear(colors.black)
+        box:render()
+        print("Web client disconnected, try refreshing https://amused-consideration-production.up.railway.app/")
+        local _, _, arg2, _ = os.pullEvent("websocket_message") -- pull message to get the new song.
+        jsConnected = true
+        return arg2, "newSong"
+    end
     -- print("Song finished")
     spotify_next_track()
+
     -- send skip to next song on spotify
     return nil
 end

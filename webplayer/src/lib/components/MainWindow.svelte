@@ -134,7 +134,7 @@
                 ].url,
             };
             ws.send(JSON.stringify(data));
-            console.log("Error sending data through websocket:", error);
+            localStorage.setItem("storedTrack", JSON.stringify(data));
         }
         title = state.track_window.current_track.name;
         artist = state.track_window.current_track.artists
@@ -186,7 +186,7 @@
             player
                 .nextTrack()
                 .then(() => {
-                    console.log("track has been skipped", error);
+                    console.log("track has been skipped");
                 })
                 .catch((error) => {
                     console.error("Error skipping tracks", error);
@@ -195,7 +195,7 @@
             player
                 .previousTrack()
                 .then(() => {
-                    console.log("going to last track", error);
+                    console.log("going to last track");
                 })
                 .catch((error) => {
                     console.error("Error going back", error);
@@ -237,8 +237,35 @@
                 ].url,
             };
             localStorage.setItem("storedTrack", JSON.stringify(data));
+
+        } else if (message === "luaConnectedOnInit") {
+            console.log("caught lua connected on init");
+            luaSocketConnected = true;
+            luaSocketConnected = luaSocketConnected;
+            if(localStorage.getItem("storedTrack")) {
+                const storedTrack = JSON.parse(localStorage.getItem("storedTrack"));
+                ws.send(JSON.stringify(storedTrack));
+            }
         }
+
     };
+    window.addEventListener("beforeunload", function(e){
+        // Do something
+        let currentTrack = lastState.track_window.current_track;
+        let data = {
+            id: currentTrack.id,
+            artist: currentTrack.artists[0].name,
+            name: currentTrack.name,
+            albumName: currentTrack.album.name,
+            albumArt:
+            lastState.track_window.current_track.album.images[
+                findLargestImageIndex(
+                    lastState.track_window.current_track.album.images
+                )
+            ].url,
+        };
+        localStorage.setItem("storedTrack", JSON.stringify(data));
+    });
 
     window.onSpotifyWebPlaybackSDKReady = async function () {
         // console.log("sdk ready");
