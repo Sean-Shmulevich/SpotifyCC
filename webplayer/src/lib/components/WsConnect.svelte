@@ -1,22 +1,5 @@
 <script>
-  import socketStore from "../wsStore";
-
-  let ws = $socketStore;
-  const sessionData = JSON.parse(localStorage.getItem("userSocketHash"));
-  export let socketConnection;
-  ws.onmessage = function (event) {
-    let message = event.data;
-    //what if lua is connected? before.
-    if (!socketConnection && message == "luaConnected") {
-      localStorage.setItem("luaSocketConnected", JSON.stringify(true));
-      socketConnection = true;
-    } //clear this when the page is closed.
-    const storedTrack = localStorage.getItem("storedTrack");
-    if (storedTrack) {
-      let data = JSON.parse(storedTrack);
-      ws.send(JSON.stringify(data));
-    }
-  };
+const sessionData = JSON.parse(localStorage.getItem("userSocketHash"));
 </script>
 
 <div class="container">
