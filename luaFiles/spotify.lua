@@ -106,11 +106,13 @@ local function play_audio(content, chunk_start, url)
             if event == "websocket_message" and arg1 == myURL then -- arg1 represents the url of the websocket that sent the message
                 local song_data = arg2
                 local audio_url = nil
-                if arg2 ~= "jsDisconnect" then
+                if arg2 ~= "jsDisconnect" and arg2 ~= "jsConnected" then
                     song_data = textutils.unserializeJSON(arg2)
                     audio_url = song_data["audio_file"]
                 elseif arg2 == "jsDisconnect" then
                     jsConnected = false
+                elseif arg2 == "jsConnected" then
+                    jsConnected = true
                 end
 
                 if audio_url ~= nil and audio_url ~= url then
@@ -179,7 +181,10 @@ local function play_audio(content, chunk_start, url)
         box:render()
         print("Web client disconnected, try refreshing https://amused-consideration-production.up.railway.app/")
         local _, _, arg2, _ = os.pullEvent("websocket_message") -- pull message to get the new song.
-        jsConnected = true
+        if arg2 == "jsConnected" then
+            jsConnected = true
+            _, _, arg2, _ = os.pullEvent("websocket_message")
+        end
         return arg2, "newSong"
     end
     -- print("Song finished")
@@ -247,7 +252,7 @@ local function handle_websocket_message(message)
     -- i think i can omit this
     speaker.stop() -- Stop any currently playing audio
 
-
+    
     local song_data = textutils.unserializeJSON(message)
 
     local audio_url = song_data["audio_file"]
@@ -381,7 +386,9 @@ local function main()
     -- this is also only called once, most of the event checking is done in the play_audio function
     -- make THIS ONE never time out.
     local event, socketUrl, message = os.pullEvent("websocket_message")
-    if socketUrl == myURL then
+    if message == "jsConnectedOnInit" or message == "jsConnected" then
+        jsConnected = true
+    elseif socketUrl == myURL then
         handle_websocket_message(message)
     end
     until terminate
