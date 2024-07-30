@@ -29,8 +29,8 @@ local function calculateHeight(box)
     local pixel_size = math.floor(smaller_img_dimention/smaller_dimention) + 1
     local actual_img_dimentions = math.floor(smaller_img_dimention/pixel_size)
     local space_left = monitor_height - actual_img_dimentions
-    if space_left < 12 then
-        return 12
+    if space_left < 10 then
+        return 10
     elseif space_left >= 35 then
         return 35
     end
@@ -65,9 +65,9 @@ local function add_playback_buttons(img, temp_canvas, box, next_song, prev_song)
 
     local start_y = math.floor(box.height - img_height)
     local start_x = math.floor((box.width - img_width)/2)
-
-    local next_start = start_x + media_button_width + 32
-    local prev_start = start_x - media_button_width - 32
+    local media_button_offset = math.floor(box.width/10)
+    local next_start = start_x + media_button_width + media_button_offset
+    local prev_start = start_x - media_button_width - media_button_offset
 
     -- for this to work, the height, width of the largest image needs to be used.
     for y = 1, img_height do
@@ -112,12 +112,13 @@ local function get_touch_boundry(img, loc, box)
     local start_y = math.floor(( math.floor(box.height - img_height))/3)
     local start_x = math.floor((box.width - img_width)/4)
 
+    local media_offset = math.floor(box.width/10)
     if loc == "top" then
         start_y = 0
     elseif loc == "left" then
-        start_x = math.floor((( start_x*2 ) - img_width - 32)/2)
+        start_x = math.floor((( start_x*2 ) - img_width - media_offset)/2)
     elseif loc == "right" then
-        start_x = math.floor((( start_x*2 ) + img_width + 32)/2)
+        start_x = math.floor((( start_x*2 ) + img_width + media_offset)/2)
     end
 
 

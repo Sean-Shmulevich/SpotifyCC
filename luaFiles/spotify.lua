@@ -8,6 +8,9 @@ local lzw = require("lzw")
 local pixelbox = require("pixelbox_lite")
 local box = pixelbox.new(term.current())
 
+box:clear(colors.black)
+box:render()
+
 local playButton = require("playButton")
 
 local terminate = false
@@ -308,6 +311,14 @@ local function handle_websocket_message(message)
                 local pos = 1
                 local function checkMsg()
                     local event, arg1, arg2 = os.pullEvent("websocket_message")
+
+                    if arg2 == "jsConnected" then
+                        jsConnected = true
+                        event, arg1, arg2 = os.pullEvent("websocket_message")
+                    elseif arg2 == "jsDisconnect" then
+                        jsConnected = false
+                        event, arg1, arg2 = os.pullEvent("websocket_message")
+                    end
                     song_data = textutils.unserializeJSON(arg2)
                     audio_url = song_data["audio_file"]
                     img_url = song_data["album_img"]
@@ -352,6 +363,14 @@ local function handle_websocket_message(message)
                 end
                 local function checkMsg()
                     local event, arg1, arg2 = os.pullEvent("websocket_message")
+                    if arg2 == "jsConnected" then
+                        jsConnected = true
+                        event, arg1, arg2 = os.pullEvent("websocket_message")
+                    elseif arg2 == "jsDisconnect" then
+                        jsConnected = false
+                        event, arg1, arg2 = os.pullEvent("websocket_message")
+                    end
+
                     song_data = textutils.unserializeJSON(arg2)
                     audio_url = song_data["audio_file"]
                     img_url = song_data["album_img"]
