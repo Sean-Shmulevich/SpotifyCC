@@ -39,6 +39,21 @@
     } else {
         authState = "bad";
     }
+    function debounce(func, delay) {
+    let timeoutId;
+    return function(...args) {
+        if (timeoutId) {
+            clearTimeout(timeoutId);
+        }
+        timeoutId = setTimeout(() => {
+            func.apply(this, args);
+        }, delay);
+    };
+}
+    const debouncedSend = debounce((data) => {
+        ws.send(data);
+        localStorage.setItem("storedTrack", data);
+    }, 2000);
 
     let lastState = {};
     let title = "";
@@ -133,8 +148,7 @@
                     findLargestImageIndex(currentTrack.album.images)
                 ].url,
             };
-            ws.send(JSON.stringify(data));
-            localStorage.setItem("storedTrack", JSON.stringify(data));
+            debouncedSend(JSON.stringify(data));
         }
         title = state.track_window.current_track.name;
         artist = state.track_window.current_track.artists
