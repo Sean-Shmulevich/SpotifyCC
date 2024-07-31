@@ -60,21 +60,26 @@ end
 local function add_playback_buttons(img, temp_canvas, box, next_song, prev_song)
     local img_width, img_height = #img[1], #img-1
 
-    --next song icon and prev size icons are the same.
-    local media_button_width, media_button_height = #next_song[1], #next_song-1
-
+    local media_button_width, media_button_height, media_button_offset, next_start, prev_start
     local start_y = math.floor(box.height - img_height)
     local start_x = math.floor((box.width - img_width)/2)
-    local media_button_offset = math.floor(box.width/10)
-    local next_start = start_x + media_button_width + media_button_offset
-    local prev_start = start_x - media_button_width - media_button_offset
+    --next song icon and prev size icons are the same.
+    if next_song ~= nil and prev_song ~= nil then
+        media_button_width, media_button_height = #next_song[1], #next_song-1
+        media_button_offset = math.floor(box.width/10)
+        next_start = start_x + media_button_width + media_button_offset
+        prev_start = start_x - media_button_width - media_button_offset
+    end
+
 
     -- for this to work, the height, width of the largest image needs to be used.
     for y = 1, img_height do
         for x = 1, img_width do
-            if x < media_button_width and y < media_button_height  then
-                temp_canvas[y+start_y][x+prev_start] = prev_song[y][x]
-                temp_canvas[y+start_y][x+next_start] = next_song[y][x]
+            if next_song ~= nil and prev_song ~= nil then
+                if x < media_button_width and y < media_button_height  then
+                    temp_canvas[y+start_y][x+prev_start] = prev_song[y][x]
+                    temp_canvas[y+start_y][x+next_start] = next_song[y][x]
+                end
             end
             temp_canvas[y+start_y][x+start_x] = colors.black -- clear before rewriting.
             temp_canvas[y+start_y][x+start_x] = img[y][x]

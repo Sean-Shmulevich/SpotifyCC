@@ -64,8 +64,8 @@ end
 if playerModeOrLoc then
     if tableContains(peripheralArr, playerModeOrLoc) then
         monitorLocation = playerModeOrLoc
-    elseif playerModeOrLoc == "terminal" then
-        playerMode = playerModeOrLoc
+    elseif playerModeOrLoc == "term" or playerModeOrLoc == "terminal" then
+        playerMode = "terminal"
     elseif playerModeOrLoc == "monitor" and args[3] then
         if tableContains(peripheralArr, arg[3]) then
             monitorLocation = arg[3]
@@ -100,7 +100,7 @@ elseif monitor ~= nil and playerMode == "monitor" then
     monitor.setTextScale(0.5)
     term.redirect(monitor)
 elseif monitor == nil and playerMode == "monitor" then
-    print("monitor not found press key to end the program")
+    print("monitor not found press key to end the program\n tip: run 'spotify your_unique_id terminal' to run without monitors\nexample command: spotify 20e44229 terminal")
     os.pullEvent("key")
     do return end
 end
@@ -379,6 +379,8 @@ local function handle_websocket_message(message)
         local album_canvas = load_album(img, img_palette)
         if not terminalMode then
             album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
+        else
+            album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box)
         end
         box:set_canvas(album_canvas)
         box:render()
@@ -411,6 +413,8 @@ local function handle_websocket_message(message)
                 album_canvas = load_album(img, img_palette)
                 if not terminalMode then
                     album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
+                else
+                    album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box)
                 end
                 box:set_canvas(album_canvas)
                 box:render()
@@ -440,6 +444,8 @@ local function handle_websocket_message(message)
                     album_canvas = load_album(img, img_palette)
                     if not terminalMode then
                         album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
+                    else
+                        album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box)
                     end
                     box:set_canvas(album_canvas)
                     box:render()
@@ -464,6 +470,8 @@ local function handle_websocket_message(message)
                 speaker.stop() -- Stop current playback
                 if not terminalMode then
                     album_canvas = playButton.add_playback_buttons(paused_img, album_canvas, box, next_img, prev_img)
+                else
+                    album_canvas = playButton.add_playback_buttons(paused_img, album_canvas, box)
                 end
                 box:set_canvas(album_canvas)
                 box:render()
@@ -476,10 +484,18 @@ local function handle_websocket_message(message)
                         else
                             event, side, x, y = os.pullEvent("key")
                             key = keys.getName(side)
+                            while key ~= "space" do
+                                print("press space to unpause")
+                                event, side, x, y = os.pullEvent("key")
+                                key = keys.getName(side)
+                            end
+
                         end
                         if key=="space" or x >= start_x and x <= end_x and y >= start_y and y <= end_y then
                             if not terminalMode then
                                 album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
+                            else
+                                album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box)
                             end
                             break
                         end
@@ -505,8 +521,10 @@ local function handle_websocket_message(message)
                     album_canvas = load_album(img, img_palette)
                     if not terminalMode then
                         album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
+                    else
+                        album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box)
                     end
-                    payload = 1
+                    payload = 1 -- start song from the beginning.
                 end
                 parallel.waitForAny(checkUnpause, checkMsg)
                 box:set_canvas(album_canvas)
