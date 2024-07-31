@@ -119,19 +119,6 @@ local playButton = require("playButton")
 
 local terminate = false
 local jsConnected = false
-local monitors = {}
-
--- if theres no monitors run in terminal mode.
-local function populateMonitors()
-    local Ms = { peripheral.find("monitor") }
-    monitors = {}
-    for i,v in pairs(Ms) do
-        table.insert(monitors, {
-            ["monitor"] = v,
-            ["page"] = 1
-        })
-    end
-end
 
 local mediaSize = playButton.calculateHeight(box)
 local paused_img, playing_img, next_img, prev_img
@@ -184,10 +171,6 @@ local function play_audio(content, chunk_start, url)
     local chunk_size = 16 * 1024
     local chunk_idx = chunk_start
     local playback_state = "playing"
-    local prev_playback_state = "playing"
-    local first_three_chunks = 0
-    local speaker_audio = nil
-    local prevChunk = nil
     local skipOnce = true
 
 
@@ -204,8 +187,6 @@ local function play_audio(content, chunk_start, url)
             if(playback_state == "playing" and speaker.playAudio(buffer)) then
                 break
             end
-
-
 
             local event, arg1, arg2, arg3 = os.pullEventRaw() -- os.pullEvent() is a blocking function that waits for an event to occur, and then returns the event and its arguments
 
@@ -226,7 +207,6 @@ local function play_audio(content, chunk_start, url)
                 end
             elseif skipOnce and ( event == "monitor_touch" or event =="key" ) and playback_state ~= "paused" then
                 -- how to get it to know when it stops
-                -- print("mouse event pause")
                 local key = arg1
                 local x = arg2
                 local y = arg3
@@ -275,10 +255,7 @@ local function play_audio(content, chunk_start, url)
             elseif event == "speaker_audio_empty" then -- there is more space in the speaker for audio.
                 -- Continue playing
             end
-
-
         end
-
 
         if playback_state == "playing" then
             chunk_idx = chunk_idx + chunk_size
@@ -297,7 +274,6 @@ local function play_audio(content, chunk_start, url)
         end
         return arg2, "newSong"
     end
-    -- print("Song finished")
     spotify_next_track()
 
     -- send skip to next song on spotify
@@ -306,7 +282,6 @@ end
 
 local function setPaletteColors(colors)
     for i=0,15 do
-        -- print(colors[i+1])
         term.setPaletteColor(2^i, colors[i+1])
         -- palette[2^i] = {term.getPaletteColor(2^i)}
     end
@@ -343,10 +318,7 @@ local function load_album(img, palette)
         for x = 1, img_size do
             -- local r,g,b = img:get_pixel(x,y):unpack()
 
-            -- print(colors.toBlit(colors.packRGB(r,g,b)))
-            -- print(find_closest_color(r*255, g*255, b*255))
             temp_canvas[y][x+center_offset] = img[y][x]
-            -- print(img[y][x])
         end
     end
     return temp_canvas
@@ -358,6 +330,27 @@ end
 -- The web player pauses until speaker.playAudio is called for the first time.
 
 -- runs the song until websocket message is recieved then stops the current song and plays the song that is the target of the new message, the message being a link to an audio file on the python server.
+local function next_song_setup(song_data, pause)
+    local img_palette = textutils.unserialize(song_data["palette"])
+    local img_url = song_data["album_img"]
+    local audio_url = song_data["audio_file"]
+    -- try streaming the image using LZW.
+    local img = get_album_img(img_url)
+
+    local album_canvas = load_album(img, img_palette)
+    local state_img = playing_img
+    if pause ~= nil then
+        state_img = paused_img
+    end
+    if not terminalMode then
+        album_canvas = playButton.add_playback_buttons(state_img, album_canvas, box, next_img, prev_img)
+    else
+        album_canvas = playButton.add_playback_buttons(state_img, album_canvas, box)
+    end
+    box:set_canvas(album_canvas)
+    box:render()
+    return img, img_palette, album_canvas, audio_url, img_url
+end
 local function handle_websocket_message(message)
     -- i think i can omit this
     speaker.stop() -- Stop any currently playing audio
@@ -368,58 +361,19 @@ local function handle_websocket_message(message)
     local audio_url = song_data["audio_file"]
     local img_url = song_data["album_img"]
     local song_content = download_audio(audio_url)
-    local payload, state
+    local payload, state, img, img_palette, album_canvas
 
     if song_content then
-        local img_palette = textutils.unserialize(song_data["palette"])
-        -- try streaming the image using LZW.
-        print(img_url)
-        local img = get_album_img(img_url)
-
-        local album_canvas = load_album(img, img_palette)
-        if not terminalMode then
-            album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
-        else
-            album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box)
-        end
-        box:set_canvas(album_canvas)
-        box:render()
-
-        -- local function wrap_play_audio()
-        --     payload, state = play_audio(song_content, 1)
-        -- end
-        -- local function wrap_check_loading()
-            --
-        --     checkLoading(album_canvas)
-        -- end
+        img, img_palette, album_canvas, audio_url, img_url = next_song_setup(song_data)
         payload, state = play_audio(song_content, 1, audio_url)
 
-        -- this loop will wait until playAudio is interrupted by a websocket message, then it will stop the current playback and download the new song and play it.
         while payload do
             if song_content and state == "newSong" then
-                loading = false
                 speaker.stop() -- Stop current playback
-                -- print("Received new song while another was playing")
-                -- song_artwork = download_artwork()
 
                 song_data = textutils.unserializeJSON(payload)
-                audio_url = song_data["audio_file"]
-                img_url = song_data["album_img"]
+                img, img_palette, album_canvas, audio_url, img_url = next_song_setup(song_data)
                 song_content = download_audio(audio_url) -- Download new audio
-                img_palette = textutils.unserialize(song_data["palette"])
-
-                img = get_album_img(img_url)
-
-                album_canvas = load_album(img, img_palette)
-                if not terminalMode then
-                    album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
-                else
-                    album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box)
-                end
-                box:set_canvas(album_canvas)
-                box:render()
-
-                -- payload, state = play_audio(song_content, 1)
                 payload, state = play_audio(song_content, 1, audio_url)
                 -- parallel.waitForAny(wrap_play_audio, wrap_check_loading)
             elseif state == "loading" then
@@ -435,20 +389,8 @@ local function handle_websocket_message(message)
                         event, arg1, arg2 = os.pullEvent("websocket_message")
                     end
                     song_data = textutils.unserializeJSON(arg2)
-                    audio_url = song_data["audio_file"]
-                    img_url = song_data["album_img"]
-                    song_content = download_audio(audio_url) -- Download new audio
-                    img_palette = textutils.unserialize(song_data["palette"])
-
-                    img = get_album_img(img_url)
-                    album_canvas = load_album(img, img_palette)
-                    if not terminalMode then
-                        album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
-                    else
-                        album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box)
-                    end
-                    box:set_canvas(album_canvas)
-                    box:render()
+                    song_content = download_audio(song_data['audio_file']) -- Download new audio
+                    img, img_palette, album_canvas, audio_url, img_url = next_song_setup(song_data)
                 end
                 local function showLoading()
                     while true do
@@ -463,7 +405,6 @@ local function handle_websocket_message(message)
                     end
                 end
                 parallel.waitForAny(showLoading, checkMsg)
-
                 -- payload, state = play_audio(song_content, 1)
                 payload, state = play_audio(song_content, 1, audio_url)
             elseif song_content and state == "paused" then
@@ -512,18 +453,8 @@ local function handle_websocket_message(message)
                     end
 
                     song_data = textutils.unserializeJSON(arg2)
-                    audio_url = song_data["audio_file"]
-                    img_url = song_data["album_img"]
+                    img, img_palette, album_canvas, audio_url, img_url = next_song_setup(song_data)
                     song_content = download_audio(audio_url) -- Download new audio
-                    img_palette = textutils.unserialize(song_data["palette"])
-
-                    img = get_album_img(img_url)
-                    album_canvas = load_album(img, img_palette)
-                    if not terminalMode then
-                        album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box, next_img, prev_img)
-                    else
-                        album_canvas = playButton.add_playback_buttons(playing_img, album_canvas, box)
-                    end
                     payload = 1 -- start song from the beginning.
                 end
                 parallel.waitForAny(checkUnpause, checkMsg)
