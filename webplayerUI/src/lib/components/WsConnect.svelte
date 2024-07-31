@@ -13,7 +13,7 @@ const sessionData = JSON.parse(localStorage.getItem("userSocketHash"));
   <div class="content">
     <p>
       For more information, as well as source code and screenshots, see the <a
-        href="https://github.com/SquidDev-CC/cloud-catcher">GitHub repository</a
+        href="https://github.com/Sean-Shmulevich/SpotifyCC">GitHub repository</a
       >.
     </p>
   </div>
