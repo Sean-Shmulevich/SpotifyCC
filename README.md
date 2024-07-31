@@ -33,6 +33,14 @@ Connect to Spotify here [https://amused-consideration-production.up.railway.app/
 - `spotify {user_hash} terminal`
     - run on computer instead of on a monitor.
 
+## Controls
+- Terminal/computer music player.
+    - Space: to pause and pause
+    - Left arrow to go to previous song
+    - Right arrow to skip song
+- Monitor music player
+    - Right click buttons to activate, a 'monitor-touch' event
+
 ## Images
 
 ![](<screenshots/big.png>)
