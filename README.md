@@ -5,6 +5,15 @@ Spotify-CC uses the Spotify webplayer api to get real time data about the song c
 
 ### Requirements
 You must have a Spotify premium account for the Spotify player to work.
+Connect to Spotify here [https://amused-consideration-production.up.railway.app/](https://amused-consideration-production.up.railway.app/)
+
+## Supported features:
+- Play/Pause
+- Next/Prev skip song
+- Monitor music player
+- All monitor sizes supported
+- Terminal music player
+- Album art image rendering
 
 ## Installation
 1. Get an advanced computer in Minecraft
@@ -16,21 +25,13 @@ You must have a Spotify premium account for the Spotify player to work.
 
 ## Program arguments
 - where `user_hash` is a unique id assigned to each user.
-- where monitor_location is top, left, right, back, front, or bottom
+- where `monitor_location` is top, left, right, back, front, or bottom
 - if you do not specify location, a monitor will be picked for you, in the default order listed above.
 - `spotify {user_hash}`
 - `spotify {user_hash} {monitor_location}` 
 - `spotify {user_hash} monitor {monitor_location}`
 - `spotify {user_hash} terminal`
     - run on computer instead of on a monitor.
-
-## Supported features:
-- Play/Pause
-- Next/Prev skip song
-- Monitor music player
-- All monitor sizes supported
-- Terminal music player
-- Album art image rendering
 
 ## Images
 
