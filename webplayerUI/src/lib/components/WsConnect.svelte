@@ -6,7 +6,7 @@ const sessionData = JSON.parse(localStorage.getItem("userSocketHash"));
   <div class="getting-started">
     <h1>Getting started</h1>
     <div class="code-block">
-      <p>&gt; wget https://cloud-catcher.squiddev.cc/cloud.lua</p>
+      <p>&gt; wget https://amused-consideration-production.up.railway.app/luaImages/spotify.lua</p>
       <p>&gt; spotify.lua {sessionData}</p>
     </div>
   </div>

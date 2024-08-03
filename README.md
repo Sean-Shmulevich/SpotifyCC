@@ -46,6 +46,8 @@ Connect to Spotify here [https://amused-consideration-production.up.railway.app/
 ![](<screenshots/big.png>)
 ![](<screenshots/medium.png>)
 ![](<screenshots/small.png>)
+![](<screenshots/mobile.png>)
+
 
 ## Compatibility
 - This program was developed with:

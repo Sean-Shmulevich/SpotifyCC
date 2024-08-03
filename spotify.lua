@@ -146,7 +146,7 @@ local function add_playback_buttons(img, temp_canvas, box, next_song, prev_song)
     local img_width, img_height = #img[1], #img-1
 
     local media_button_width, media_button_height, media_button_offset, next_start, prev_start
-    local start_y = math.floor(box.height - img_height)
+    local start_y = math.floor(box.height - img_height) - 3
     local start_x = math.floor((box.width - img_width)/2)
     --next song icon and prev size icons are the same.
     if next_song ~= nil and prev_song ~= nil then

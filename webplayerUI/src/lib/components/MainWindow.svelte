@@ -329,7 +329,6 @@
             player.addListener("account_error", ({ message }) => {
                 console.error(message);
                 toast.push(`Spotify account error: ${message}`);
-                authState = "bad";
             });
 
             player.connect().then((success) => {
