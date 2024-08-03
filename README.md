@@ -6,6 +6,7 @@ Spotify-CC uses the Spotify webplayer api to get real time data about the song c
 ### Requirements
 You must have a Spotify premium account for the Spotify player to work.
 Connect to Spotify here [https://amused-consideration-production.up.railway.app/](https://amused-consideration-production.up.railway.app/)
+- !!IMPORTANT the app is not yet approved by Spotify, you will have issues logging into the web browser side of the Spotify player, even if you have a spotify premium account. For the time being, for the app to work you will need to send a request to `seanshmulevich@gmail.com` containing the email associated with your Spotify premium account. the subject should be, 'Spotify-CC user access request'. I will then add you to the list of approved users and you will be able to use the app.
 
 ## Supported features:
 - Play/Pause
@@ -53,6 +54,7 @@ Connect to Spotify here [https://amused-consideration-production.up.railway.app/
 - This program was developed with:
 - `CC:tweaked version 1.111.0`
 - `Minecraft version 1.20.1`
-
 It may work with other versions, let me know if you have any issues.
 
+## Running the backend server locally
+- Not yet possible
