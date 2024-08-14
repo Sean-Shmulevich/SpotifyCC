@@ -28,12 +28,14 @@ Connect to Spotify here [https://amused-consideration-production.up.railway.app/
 ## Program arguments
 - where `user_hash` is a unique id assigned to each user.
 - where `monitor_location` is top, left, right, back, front, or bottom
-- if you do not specify location, a monitor will be picked for you, in the default order listed above.
-- `spotify {user_hash}`
-- `spotify {user_hash} {monitor_location}` 
-- `spotify {user_hash} monitor {monitor_location}`
-- `spotify {user_hash} terminal`
-    - run on computer instead of on a monitor.
+- if you do not specify the location, a monitor will be picked for you, in the default order listed above, in the definition of 'monitor_location'.
+- Play on the first available monitor
+    - `spotify {user_hash}`
+- Play on a specified monitor
+    - `spotify {user_hash} {monitor_location}` 
+    - `spotify {user_hash} monitor {monitor_location}`
+-  Run on the computer terminal screen, this includes the 'advanced noisy pocket computer'.
+    - `spotify {user_hash} terminal`
 
 ## Controls
 - Terminal/computer music player.
