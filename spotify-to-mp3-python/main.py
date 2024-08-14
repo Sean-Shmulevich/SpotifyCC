@@ -13,8 +13,6 @@ from connection_manager import ConnectionManager
 from create_media_cc import download_song, download_cc_image_encoded
 from boto3 import client
 
-cid = 'c32a475ce586434d9c6436b5fa71de71'
-secret = '6be9cfca947d4503b5be96c627c6ba17'
 # redirect_uri = 'http://localhost:7777/callback'
 redirect_uri = 'https://racer-ultimate-literally.ngrok-free.app/callback'
 scope = 'user-read-currently-playing user-read-playback-state streaming user-read-email user-read-private user-modify-playback-state'
