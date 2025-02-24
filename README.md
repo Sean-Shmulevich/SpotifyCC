@@ -1,3 +1,4 @@
+**Attention this project is currently down, I am working on a self-hosted version that redirects audio directly from your device**
 # Spotify-CC
 - What is spotify-cc?
 Spotify-CC is a live Spotify music player program which you can run in minecraft!
