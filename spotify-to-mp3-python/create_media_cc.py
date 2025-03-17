@@ -64,6 +64,7 @@ async def download_song(song_id, artist, name, extension="dfpwm"):
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3'
         }],
+        'cookiefile': './cookies.txt',
         "postprocessor_args": ['-ac', '2', '-ar', '48k', '-sample_fmt', "s16"]
     }
 
