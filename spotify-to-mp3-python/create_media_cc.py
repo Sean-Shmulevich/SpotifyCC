@@ -54,7 +54,21 @@ async def download_song(song_id, artist, name, extension="dfpwm"):
     ydl_opts = {
         'format': 'ba.2',
         "http_headers": {
-            "User-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
+            "User-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+                "Cookie": (
+        "__Secure-YEC=Cgs2NGtpTS1Ra3NvQSjc15m2BjIKCgJDSBIEGgAgEg%3D%3D; "
+        "LOGIN_INFO=AFmmF2swRgIhAIAOj6rwLZlKCO9zck2ysLSTx8nav9ti3rEcCEc44kKjAiEA_pWoffpqcv7ElfNp8CUWf_23zbG4gmSs6CmLk4yw02s:QUQ3MjNmeURwOHVrMU5CTzNBbjNyb3ZfZGxiME9vMndrdTR5cnRRZjZLcGZ1dW8ySTlvZ1V5djlndkdTb09aVm5HZ0sxRDVvTmIzNHdEZTNCR1JjNXFkYTdOSzYydkJRV1U3SUhBQ1pHZnRUVGxWdGZiQmFmUzhvYklWVms0ZXF1ZDBiNllaUTlDSWRwakFsNU1EZlVwVTU2WG9hdjhVSERn; "
+        "SID=g.a000uwh2nZl7I6_-VxD5spD1_06rYbcUcqb1B0G6RATAlNbkGrqPJuQXpovm_KI0CW_h1pL__QACgYKAR0SAQ4SFQHGX2MizBQ6MvwcuLg5-g-mkR7yIBoVAUF8yKqC2Xu5P2KVu10iFHl-Px870076; "
+        "__Secure-1PSID=g.a000uwh2nZl7I6_-VxD5spD1_06rYbcUcqb1B0G6RATAlNbkGrqP5N4jbvhuONoeVLowLA6ZDgACgYKAccSAQ4SFQHGX2MiWl2Vy155pgJJMu-8mXQekBoVAUF8yKoy4vrCmRTviA94CgNpe_a40076; "
+        "__Secure-3PSID=g.a000uwh2nZl7I6_-VxD5spD1_06rYbcUcqb1B0G6RATAlNbkGrqPGqjnU2N6uiUrsphkhwjjNQACgYKAVQSAQ4SFQHGX2Miezc9H9_cBqROFooAltKXThoVAUF8yKokp1p-8RESnw7KFoFvreit0076; "
+        "APISID=KwZ0lyykZIECZvpU/AZZSBUKs466YWJ1Xk; "
+        "SAPISID=WA6CazOdglP-xZqz/Aep7LPLmZFot3M8wM; "
+        "__Secure-1PAPISID=WA6CazOdglP-xZqz/Aep7LPLmZFot3M8wM; "
+        "__Secure-3PAPISID=WA6CazOdglP-xZqz/Aep7LPLmZFot3M8wM; "
+        "YSC=jXPxaTWxmu0; "
+        "VISITOR_INFO1_LIVE=ZVlH9yVAM88; "
+        "VISITOR_PRIVACY_METADATA=CgJVUxIEGgAgSA%3D%3D"
+    ),
         },
         # 'outtmpl': "-",
         'outtmpl': "-",
@@ -64,7 +78,6 @@ async def download_song(song_id, artist, name, extension="dfpwm"):
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3'
         }],
-        'cookiefile': './cookies.txt',
         "postprocessor_args": ['-ac', '2', '-ar', '48k', '-sample_fmt', "s16"]
     }
 
