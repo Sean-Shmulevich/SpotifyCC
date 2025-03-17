@@ -8,7 +8,6 @@ from sklearn.cluster import KMeans
 from lzw import lzw_compress
 from boto_client import put_obj_s3
 
-
 # todo: catch errors
 def download_image_to_memory(url):
     response = requests.get(url)
@@ -51,10 +50,14 @@ def find_nearest_ansi_color_batch(pixels, tree, ansi_palette, original_shape):
     return np.array(hex_indices).reshape(original_shape[0], original_shape[1])
 
 
+
+
+
 def rgb_to_hex(rgb):
     return "0x{:02x}{:02x}{:02x}".format(rgb[0], rgb[1], rgb[2])
 
 
+# converts to the type of file that lua is looking for.
 def convert_colors_to_lua_hex(colors):
     hex_colors = [rgb_to_hex(color) for color in colors]
     lua_hex_array = "{" + ", ".join(hex_colors) + "}"
@@ -165,9 +168,7 @@ def simple_pixelate(image, name):
         nfp_img += ''.join(rgb_to_char(pixel) for pixel in row)
         nfp_img += "\n"
     print(nfp_img)
-    with open(f"./luaImages/{name}.lzw", "wb") as f:
-        f.write(lzw_compress(nfp_img).encode('latin-1'))
-
+    with open(f"./luaImages/{name}.lzw", "wb") as f: f.write(lzw_compress(nfp_img).encode('latin-1'))
 
 # with open("./luaImages/playing-paused-10.txt", "r") as f:
 #     with open("./luaImages/paused_10.lzw", "wb") as lzw:
